@@ -14,6 +14,15 @@ const formContainer = document.getElementById('form-container');
 const modalOverlay = document.getElementById('modal-overlay');
 const btnEditarPorRep = document.getElementById('btn-editar-por-rep');
 const btnExcluirPorRep = document.getElementById('btn-excluir-por-rep');
+const inputAnexos = document.getElementById('anexos');
+const listaArquivosSelecionados = document.getElementById('lista-arquivos-selecionados');
+const btnAdicionarIA = document.getElementById('btn-adicionar-ia');
+const inputPdfParaIA = document.getElementById('pdf-para-ia');
+
+// Variável para armazenar arquivos temporariamente
+let arquivosParaAnexar = [];
+let modoEdicao = false;
+let localOriginal = null;
 
 // Funções
 function salvarNoLocalStorage() {
@@ -31,33 +40,104 @@ function adicionarLocal(e) {
     const tipoExame = document.getElementById('tipoExame').value;
     const resumoCaso = document.getElementById('resumoCaso').value;
     
-    // Verificar se o REP já existe
-    const existeRep = locais.some(local => local.rep === rep);
-    if (existeRep) {
-        alert('Já existe um local com este número de REP!');
-        return;
+    // Verificar se o REP já existe, apenas se não estiver editando o mesmo REP
+    if (!modoEdicao) {
+        const existeRep = locais.some(local => local.rep === rep);
+        if (existeRep) {
+            alert('Já existe um local com este número de REP!');
+            return;
+        }
+    } else if (modoEdicao && localOriginal.rep !== rep) {
+        // Se estiver editando, mas mudou o número REP, verificar se o novo REP já existe
+        const existeRep = locais.some(local => local.rep === rep);
+        if (existeRep) {
+            alert('Já existe um local com este número de REP!');
+            return;
+        }
     }
     
     const novoLocal = {
-        id: Date.now(),
+        id: modoEdicao ? localOriginal.id : Date.now(),
         rep,
         endereco,
         status,
         nomeVitima,
         telefoneVitima,
         tipoExame,
-        resumoCaso
+        resumoCaso,
+        anexos: arquivosParaAnexar
     };
     
     locais.push(novoLocal);
     salvarNoLocalStorage();
     atualizarListaLocais();
     
+    // Resetar modo de edição
+    modoEdicao = false;
+    localOriginal = null;
+    
     // Esconder formulário após adicionar
     fecharModal();
     
-    // Limpar formulário
+    // Limpar formulário e arquivos temporários
     form.reset();
+    arquivosParaAnexar = [];
+    listaArquivosSelecionados.innerHTML = '';
+}
+
+function processarArquivosSelecionados() {
+    // Não limpar arquivosParaAnexar para manter os arquivos já anexados
+    
+    if (inputAnexos.files.length === 0) return;
+    
+    Array.from(inputAnexos.files).forEach(arquivo => {
+        const leitor = new FileReader();
+        
+        leitor.onload = function(e) {
+            const novoAnexo = {
+                nome: arquivo.name,
+                tipo: arquivo.type,
+                tamanho: arquivo.size,
+                conteudo: e.target.result,
+                dataAnexo: new Date().toISOString()
+            };
+            
+            arquivosParaAnexar.push(novoAnexo);
+            
+            // Adicionar item à lista visual
+            const itemArquivo = document.createElement('div');
+            itemArquivo.className = 'item-arquivo';
+            itemArquivo.innerHTML = `
+                <i class="fa-solid fa-file"></i>
+                <span>${arquivo.name}</span>
+                <span class="tamanho-arquivo">(${formatarTamanhoArquivo(arquivo.size)})</span>
+                <button type="button" class="btn-remover-anexo" data-index="${arquivosParaAnexar.length - 1}">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            `;
+            
+            listaArquivosSelecionados.appendChild(itemArquivo);
+            
+            // Adicionar evento para o botão de remover
+            const btnRemover = itemArquivo.querySelector('.btn-remover-anexo');
+            btnRemover.addEventListener('click', function() {
+                const index = parseInt(this.dataset.index);
+                arquivosParaAnexar.splice(index, 1);
+                atualizarListaArquivosSelecionados();
+            });
+        };
+        
+        leitor.readAsDataURL(arquivo);
+    });
+    
+    // Limpar o input de arquivo para permitir selecionar o mesmo arquivo novamente
+    inputAnexos.value = '';
+}
+
+function formatarTamanhoArquivo(bytes) {
+    if (bytes < 1024) return bytes + ' bytes';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+    else return (bytes / 1048576).toFixed(2) + ' MB';
 }
 
 function excluirLocal(id) {
@@ -84,6 +164,10 @@ function excluirPorRep() {
 function editarLocal(id) {
     const local = locais.find(local => local.id === id);
     
+    // Guardar referência ao local original
+    localOriginal = local;
+    modoEdicao = true;
+    
     // Preencher o formulário com os dados do local
     document.getElementById('rep').value = local.rep;
     document.getElementById('endereco').value = local.endereco;
@@ -93,6 +177,13 @@ function editarLocal(id) {
     document.getElementById('tipoExame').value = local.tipoExame || '';
     document.getElementById('resumoCaso').value = local.resumoCaso || '';
     
+    // Carregar anexos existentes
+    arquivosParaAnexar = local.anexos ? [...local.anexos] : [];
+    
+    // Limpar e atualizar a lista visual de arquivos
+    listaArquivosSelecionados.innerHTML = '';
+    atualizarListaArquivosSelecionados();
+    
     // Remover o local da lista
     locais = locais.filter(local => local.id !== id);
     salvarNoLocalStorage();
@@ -100,6 +191,36 @@ function editarLocal(id) {
     
     // Mostrar formulário para edição
     abrirModal();
+}
+
+function atualizarListaArquivosSelecionados() {
+    listaArquivosSelecionados.innerHTML = '';
+    
+    if (!arquivosParaAnexar.length) return;
+    
+    arquivosParaAnexar.forEach((anexo, index) => {
+        const itemArquivo = document.createElement('div');
+        itemArquivo.className = 'item-arquivo';
+        itemArquivo.innerHTML = `
+            <i class="fa-solid fa-file"></i>
+            <span>${anexo.nome}</span>
+            <span class="tamanho-arquivo">(${formatarTamanhoArquivo(anexo.tamanho)})</span>
+            <button type="button" class="btn-remover-anexo" data-index="${index}">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        `;
+        
+        listaArquivosSelecionados.appendChild(itemArquivo);
+    });
+    
+    // Adicionar eventos para botões de remover
+    document.querySelectorAll('.btn-remover-anexo').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = parseInt(this.dataset.index);
+            arquivosParaAnexar.splice(index, 1);
+            atualizarListaArquivosSelecionados();
+        });
+    });
 }
 
 function editarPorRep() {
@@ -118,6 +239,60 @@ function editarPorRep() {
 function abrirNoMaps(endereco) {
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
     window.open(url, '_blank');
+}
+
+function abrirAnexo(conteudo, tipo, nome) {
+    const novaJanela = window.open('', '_blank');
+    if (tipo.startsWith('image/')) {
+        novaJanela.document.write(`
+            <html>
+                <head>
+                    <title>${nome}</title>
+                    <style>
+                        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
+                        img { max-width: 95%; max-height: 95%; object-fit: contain; }
+                    </style>
+                </head>
+                <body>
+                    <img src="${conteudo}" alt="${nome}">
+                </body>
+            </html>
+        `);
+    } else if (tipo === 'application/pdf') {
+        novaJanela.document.write(`
+            <html>
+                <head>
+                    <title>${nome}</title>
+                    <style>
+                        body { margin: 0; height: 100vh; }
+                        iframe { width: 100%; height: 100%; border: none; }
+                    </style>
+                </head>
+                <body>
+                    <iframe src="${conteudo}" type="application/pdf"></iframe>
+                </body>
+            </html>
+        `);
+    } else {
+        // Para outros tipos de arquivo, tenta abrir diretamente ou fazer download
+        novaJanela.document.write(`
+            <html>
+                <head>
+                    <title>${nome}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                        a { display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #3498db; color: white; text-decoration: none; border-radius: 4px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Visualização de arquivo</h1>
+                    <p>O navegador pode não conseguir exibir este tipo de arquivo (${tipo}) diretamente.</p>
+                    <a href="${conteudo}" download="${nome}">Baixar arquivo</a>
+                </body>
+            </html>
+        `);
+    }
+    novaJanela.document.close();
 }
 
 function atualizarListaLocais() {
@@ -139,7 +314,7 @@ function atualizarListaLocais() {
     }
     
     locaisFiltrados.forEach(local => {
-        const temDetalhes = local.nomeVitima || local.telefoneVitima || local.tipoExame || local.resumoCaso;
+        const temDetalhes = local.nomeVitima || local.telefoneVitima || local.tipoExame || local.resumoCaso || (local.anexos && local.anexos.length > 0);
         
         // Linha principal
         const tr = document.createElement('tr');
@@ -179,6 +354,27 @@ function atualizarListaLocais() {
             if (local.tipoExame) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-stethoscope"></i> Tipo de exame:</span> ${local.tipoExame}</div>`;
             if (local.resumoCaso) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-file-lines"></i> Resumo do caso:</span> <div class="detalhe-resumo">${local.resumoCaso}</div></div>`;
             
+            // Adicionar anexos se existirem
+            if (local.anexos && local.anexos.length > 0) {
+                detalhesHTML += `<div class="detalhe-item">
+                    <span class="detalhe-label"><i class="fa-solid fa-paperclip"></i> Anexos:</span>
+                    <div class="lista-anexos">`;
+                
+                local.anexos.forEach((anexo, index) => {
+                    detalhesHTML += `
+                        <div class="anexo-item">
+                            <i class="fa-solid fa-file"></i>
+                            <a href="#" onclick="abrirAnexo('${anexo.conteudo}', '${anexo.tipo}', '${anexo.nome.replace(/'/g, "\\'")}'); return false;">
+                                ${anexo.nome}
+                            </a>
+                            <span class="tamanho-arquivo">(${formatarTamanhoArquivo(anexo.tamanho)})</span>
+                        </div>
+                    `;
+                });
+                
+                detalhesHTML += `</div></div>`;
+            }
+            
             detalhesHTML += '</td>';
             
             trDetalhes.innerHTML = detalhesHTML;
@@ -204,12 +400,34 @@ function toggleDetalhes(id) {
 }
 
 function abrirModal() {
+    // Ao abrir para um novo local, limpar os arquivos
+    if (document.getElementById('rep').value === '') {
+        arquivosParaAnexar = [];
+        listaArquivosSelecionados.innerHTML = '';
+        
+        // Se não estiver em modo de edição, resetar as variáveis de controle
+        if (!modoEdicao) {
+            localOriginal = null;
+        }
+    }
+    
     modalOverlay.classList.add('modal-visible');
 }
 
 function fecharModal() {
+    // Se estiver em modo de edição e cancelar, restaurar o local original
+    if (modoEdicao && localOriginal) {
+        locais.push(localOriginal);
+        salvarNoLocalStorage();
+        atualizarListaLocais();
+        modoEdicao = false;
+        localOriginal = null;
+    }
+    
     modalOverlay.classList.remove('modal-visible');
     form.reset();
+    arquivosParaAnexar = [];
+    listaArquivosSelecionados.innerHTML = '';
 }
 
 function salvarParaArquivo() {
@@ -266,6 +484,19 @@ function carregarDeArquivo(e) {
     e.target.value = '';
 }
 
+// Funções para o processamento de PDFs por IA
+function processarPdfsPorIA(e) {
+    const arquivos = e.target.files;
+    
+    if (arquivos.length === 0) return;
+    
+    const nomeArquivos = Array.from(arquivos).map(arquivo => arquivo.name).join(', ');
+    alert(`Arquivos PDF selecionados: ${nomeArquivos}\n\nO processamento por IA será implementado em uma etapa futura.`);
+    
+    // Limpar o input para permitir selecionar os mesmos arquivos novamente
+    e.target.value = '';
+}
+
 // Event Listeners
 form.addEventListener('submit', adicionarLocal);
 filtroStatus.addEventListener('change', atualizarListaLocais);
@@ -276,6 +507,9 @@ btnMostrarForm.addEventListener('click', abrirModal);
 btnFecharForm.addEventListener('click', fecharModal);
 btnEditarPorRep.addEventListener('click', editarPorRep);
 btnExcluirPorRep.addEventListener('click', excluirPorRep);
+inputAnexos.addEventListener('change', processarArquivosSelecionados);
+btnAdicionarIA.addEventListener('click', () => inputPdfParaIA.click());
+inputPdfParaIA.addEventListener('change', processarPdfsPorIA);
 
 // Fechar modal quando clicar fora do conteúdo
 modalOverlay.addEventListener('click', function(e) {
@@ -289,4 +523,5 @@ atualizarListaLocais();
 
 // Expor funções para o HTML
 window.abrirNoMaps = abrirNoMaps;
-window.toggleDetalhes = toggleDetalhes; 
+window.toggleDetalhes = toggleDetalhes;
+window.abrirAnexo = abrirAnexo; 

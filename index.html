@@ -18,6 +18,9 @@
                     <button id="btn-mostrar-form" class="btn-adicionar">
                         <i class="fa-solid fa-plus"></i> Adicionar Novo Local
                     </button>
+                    <button id="btn-adicionar-ia" class="btn-adicionar-ia">
+                        <i class="fa-solid fa-robot"></i> Adicionar Local por IA
+                    </button>
                     <button id="btn-editar-por-rep" class="btn-editar-global">
                         <i class="fa-solid fa-pen-to-square"></i> Editar Local
                     </button>
@@ -56,6 +59,7 @@
             <button id="salvar-arquivo">Salvar para Arquivo</button>
             <input type="file" id="carregar-arquivo" accept=".json" style="display:none">
             <button id="btn-carregar-arquivo">Carregar de Arquivo</button>
+            <input type="file" id="pdf-para-ia" accept=".pdf" multiple style="display:none">
         </div>
     </div>
 
@@ -98,7 +102,12 @@
                     <label for="resumoCaso">Resumo do caso:</label>
                     <textarea id="resumoCaso" rows="4"></textarea>
                 </div>
-                <button type="submit">Adicionar</button>
+                <div class="form-group">
+                    <label for="anexos">Anexar arquivos:</label>
+                    <input type="file" id="anexos" multiple>
+                    <div class="arquivos-selecionados" id="lista-arquivos-selecionados"></div>
+                </div>
+                <button type="submit" id="btn-salvar-local">Salvar</button>
             </form>
         </div>
     </div>

@@ -91,6 +91,15 @@ h2 {
     background-color: #219653;
 }
 
+.btn-adicionar-ia {
+    background-color: #9b59b6;
+    font-weight: bold;
+}
+
+.btn-adicionar-ia:hover {
+    background-color: #8e44ad;
+}
+
 .form-container, .list-container {
     margin-bottom: 30px;
 }
@@ -321,4 +330,51 @@ button i {
     background-color: white;
     border-radius: 4px;
     border: 1px solid #eee;
+}
+
+/* Estilos para anexos */
+.arquivos-selecionados {
+    margin-top: 10px;
+}
+
+.item-arquivo, .anexo-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 5px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.item-arquivo i, .anexo-item i {
+    color: #3498db;
+    margin-right: 8px;
+}
+
+.tamanho-arquivo {
+    margin-left: 8px;
+    color: #777;
+    font-size: 0.85em;
+}
+
+.btn-remover-anexo {
+    background: transparent;
+    color: #e74c3c;
+    padding: 2px 5px;
+    margin-left: auto;
+    font-size: 12px;
+}
+
+.lista-anexos {
+    margin-top: 10px;
+}
+
+.anexo-item a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.anexo-item a:hover {
+    text-decoration: underline;
 } 
