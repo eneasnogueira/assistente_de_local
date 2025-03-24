@@ -47,11 +47,13 @@ Uma aplicação web simples para gerenciar locais visitados no trabalho, com fun
    - Para usar IA:
      - Clique em "Configurar API" para adicionar sua chave da API da OpenAI
      - Carregue imagens clicando em "Carregar Imagens para IA"
-     - Clique em "Preencher com IA" para processar as imagens e extrair informações automaticamente
+     - Clique em "Preencher com IA" para iniciar o processamento automático
+     - As imagens carregadas para a IA serão automaticamente anexadas ao caso
    - Anexe arquivos adicionais conforme necessário
 5. Use os botões na tabela para cada local:
    - Botão de expansão (+/-): expande a linha para mostrar os detalhes adicionais
    - Maps: abre o Google Maps com o endereço
+   - Concluir: marca o local como concluído (apenas para locais pendentes)
 6. Na área expandida, é possível visualizar os detalhes do local, incluindo os arquivos anexados
    - Clique nos nomes dos arquivos para abri-los no navegador
 7. Use os botões na parte inferior para salvar ou carregar locais de arquivos

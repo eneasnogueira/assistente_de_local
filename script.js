@@ -336,9 +336,16 @@ function atualizarListaLocais() {
             <td>${local.endereco}</td>
             <td class="status-${local.status}">${local.status === 'pendente' ? 'Pendente' : 'Concluído'}</td>
             <td>
-                <button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
-                    <i class="fa-solid fa-map-location-dot"></i> Maps
-                </button>
+                <div class="acoes-container">
+                    <button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
+                        <i class="fa-solid fa-map-location-dot"></i> Maps
+                    </button>
+                    ${local.status === 'pendente' ? 
+                        `<button class="btn-concluir" onclick="marcarComoConcluido(${locais.indexOf(local)})">
+                            <i class="fa-solid fa-check"></i>
+                        </button>` : ''
+                    }
+                </div>
             </td>
         `;
         
@@ -723,7 +730,25 @@ modalOverlay.addEventListener('click', function(e) {
 // Inicializar a lista de locais
 atualizarListaLocais();
 
-// Expor funções para o HTML
+// Expor funções para o escopo global para serem acessíveis através de eventos inline
 window.abrirNoMaps = abrirNoMaps;
 window.toggleDetalhes = toggleDetalhes;
-window.abrirAnexo = abrirAnexo; 
+window.abrirAnexo = abrirAnexo;
+window.marcarComoConcluido = marcarComoConcluido;
+
+// Função para marcar local como concluído
+function marcarComoConcluido(index) {
+    const local = locais[index];
+    
+    // Confirmar a ação
+    if (confirm(`Deseja marcar o local REP ${local.rep} como concluído?`)) {
+        // Atualizar o status
+        local.status = 'concluido';
+        
+        // Salvar no localStorage
+        salvarNoLocalStorage();
+        
+        // Atualizar a lista
+        atualizarListaLocais();
+    }
+} 

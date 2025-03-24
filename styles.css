@@ -439,4 +439,18 @@ button i {
 .imagem-item i {
     color: #3498db;
     margin-right: 8px;
+}
+
+.btn-concluir {
+    background-color: #27ae60;
+    margin-left: 5px;
+}
+
+.btn-concluir:hover {
+    background-color: #219653;
+}
+
+.acoes-container {
+    display: flex;
+    gap: 5px;
 } 
