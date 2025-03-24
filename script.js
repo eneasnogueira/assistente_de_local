@@ -457,13 +457,20 @@ function salvarParaArquivo() {
         return;
     }
     
+    // Obter a data atual e formatá-la como dd_mm_aaaa
+    const dataAtual = new Date();
+    const dia = String(dataAtual.getDate()).padStart(2, '0');
+    const mes = String(dataAtual.getMonth() + 1).padStart(2, '0');
+    const ano = dataAtual.getFullYear();
+    const dataFormatada = `${dia}_${mes}_${ano}`;
+    
     const dadosJSON = JSON.stringify(locais, null, 2);
     const blob = new Blob([dadosJSON], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'meus_locais.json';
+    a.download = `REPs em ${dataFormatada}.json`;
     document.body.appendChild(a);
     a.click();
     
