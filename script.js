@@ -759,9 +759,6 @@ async function preencherFormularioComIA() {
         // Atualizar a lista visual de anexos (para garantir que todos os anexos estejam visíveis)
         atualizarListaArquivosSelecionados();
         
-        // Mostrar mensagem de sucesso
-        alert(`Formulário preenchido com sucesso usando IA!\n\n${imagensParaIA.length} arquivo(s) foram processados e anexados ao caso.`);
-        
     } catch (error) {
         console.error('Erro ao processar imagens com IA:', error);
         alert(`Erro ao processar imagens: ${error.message}`);
