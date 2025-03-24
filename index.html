@@ -31,7 +31,7 @@
                 <label for="filtro-status">Filtrar por status:</label>
                 <select id="filtro-status">
                     <option value="todos">Todos</option>
-                    <option value="pendente">Pendente</option>
+                    <option value="pendente" selected>Pendente</option>
                     <option value="concluido">Concluído</option>
                 </select>
             </div>
@@ -68,15 +68,18 @@
             </div>
             <div class="ia-section">
                 <div class="ia-buttons">
-                    <button type="button" id="btn-carregar-pdf-ia" class="btn-ia">
-                        <i class="fa-solid fa-file-pdf"></i> Carregar PDFs para IA
+                    <button type="button" id="btn-carregar-imagem-ia" class="btn-ia">
+                        <i class="fa-solid fa-image"></i> Carregar Imagens para IA
                     </button>
                     <button type="button" id="btn-preencher-ia" class="btn-ia" disabled>
                         <i class="fa-solid fa-robot"></i> Preencher com IA
                     </button>
+                    <button type="button" id="btn-config-api" class="btn-config">
+                        <i class="fa-solid fa-key"></i> Configurar API
+                    </button>
                 </div>
-                <div id="pdfs-carregados" class="pdfs-carregados"></div>
-                <input type="file" id="pdf-para-ia" accept=".pdf" multiple style="display:none">
+                <div id="imagens-carregadas" class="imagens-carregadas"></div>
+                <input type="file" id="imagem-para-ia" accept="image/*" multiple style="display:none">
             </div>
             <form id="local-form">
                 <div class="form-group">

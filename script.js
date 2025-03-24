@@ -16,16 +16,17 @@ const btnEditarPorRep = document.getElementById('btn-editar-por-rep');
 const btnExcluirPorRep = document.getElementById('btn-excluir-por-rep');
 const inputAnexos = document.getElementById('anexos');
 const listaArquivosSelecionados = document.getElementById('lista-arquivos-selecionados');
-const inputPdfParaIA = document.getElementById('pdf-para-ia');
-const btnCarregarPdfIA = document.getElementById('btn-carregar-pdf-ia');
+const inputImagemParaIA = document.getElementById('imagem-para-ia');
+const btnCarregarImagemIA = document.getElementById('btn-carregar-imagem-ia');
 const btnPreencherIA = document.getElementById('btn-preencher-ia');
-const pdfsCarregados = document.getElementById('pdfs-carregados');
+const imagensCarregadas = document.getElementById('imagens-carregadas');
+const btnConfigAPI = document.getElementById('btn-config-api');
 
 // Variáveis para armazenar dados
 let arquivosParaAnexar = [];
 let modoEdicao = false;
 let localOriginal = null;
-let pdfsParaIA = [];
+let imagensParaIA = [];
 
 // Funções
 function salvarNoLocalStorage() {
@@ -408,9 +409,9 @@ function abrirModal() {
         arquivosParaAnexar = [];
         listaArquivosSelecionados.innerHTML = '';
         
-        // Limpar PDFs para IA
-        pdfsParaIA = [];
-        pdfsCarregados.innerHTML = '';
+        // Limpar imagens para IA
+        imagensParaIA = [];
+        imagensCarregadas.innerHTML = '';
         btnPreencherIA.disabled = true;
         
         // Se não estiver em modo de edição, resetar as variáveis de controle
@@ -437,9 +438,9 @@ function fecharModal() {
     arquivosParaAnexar = [];
     listaArquivosSelecionados.innerHTML = '';
     
-    // Limpar PDFs para IA
-    pdfsParaIA = [];
-    pdfsCarregados.innerHTML = '';
+    // Limpar imagens para IA
+    imagensParaIA = [];
+    imagensCarregadas.innerHTML = '';
     btnPreencherIA.disabled = true;
 }
 
@@ -497,53 +498,203 @@ function carregarDeArquivo(e) {
     e.target.value = '';
 }
 
-// Funções para processamento de PDFs com IA
-function carregarPdfsParaIA() {
-    inputPdfParaIA.click();
+// Funções para carregar imagens para IA
+function carregarImagensParaIA() {
+    inputImagemParaIA.click();
 }
 
-function processarPdfsSelecionados(e) {
+// Função para processar imagens selecionadas
+function processarImagensSelecionadas(e) {
     const arquivos = e.target.files;
     
     if (arquivos.length === 0) return;
     
     // Limpar a lista visual
-    pdfsCarregados.innerHTML = '';
-    // Limpar array de PDFs
-    pdfsParaIA = [];
+    imagensCarregadas.innerHTML = '';
+    // Limpar array de imagens
+    imagensParaIA = [];
     
     Array.from(arquivos).forEach(arquivo => {
-        // Adicionar à lista de PDFs para IA
-        pdfsParaIA.push(arquivo);
+        // Verificar se o arquivo é uma imagem
+        if (!arquivo.type.startsWith('image/')) {
+            alert(`O arquivo "${arquivo.name}" não é uma imagem. Por favor, selecione apenas arquivos de imagem.`);
+            return;
+        }
+        
+        // Adicionar à lista de imagens para IA
+        imagensParaIA.push(arquivo);
         
         // Adicionar à interface visual
-        const pdfItem = document.createElement('div');
-        pdfItem.className = 'pdf-item';
-        pdfItem.innerHTML = `
-            <i class="fa-solid fa-file-pdf"></i>
+        const imgItem = document.createElement('div');
+        imgItem.className = 'imagem-item';
+        imgItem.innerHTML = `
+            <i class="fa-solid fa-image"></i>
             <span>${arquivo.name}</span>
             <span class="tamanho-arquivo">(${formatarTamanhoArquivo(arquivo.size)})</span>
         `;
         
-        pdfsCarregados.appendChild(pdfItem);
+        imagensCarregadas.appendChild(imgItem);
     });
     
-    // Habilitar botão de preencher com IA se houver PDFs carregados
-    btnPreencherIA.disabled = pdfsParaIA.length === 0;
+    // Habilitar botão de preencher com IA se houver imagens carregadas
+    btnPreencherIA.disabled = imagensParaIA.length === 0;
     
     // Limpar o input de arquivo para permitir selecionar os mesmos arquivos novamente
     e.target.value = '';
 }
 
-function preencherFormularioComIA() {
-    if (pdfsParaIA.length === 0) {
-        alert('Você precisa carregar PDFs antes de usar a IA!');
+// Função para processar imagens com ChatGPT-4o
+async function preencherFormularioComIA() {
+    if (imagensParaIA.length === 0) {
+        alert('Você precisa carregar imagens antes de usar a IA!');
         return;
     }
     
-    // Aqui seria implementada a lógica de processamento por IA
-    // Por enquanto apenas mostramos um alerta
-    alert(`Processando ${pdfsParaIA.length} PDF(s) com IA...\nEsta funcionalidade será implementada futuramente.`);
+    // Mostrar indicador de carregamento
+    const btnTextoOriginal = btnPreencherIA.innerHTML;
+    btnPreencherIA.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando...';
+    btnPreencherIA.disabled = true;
+    
+    try {
+        // Verificar a chave da API
+        const apiKey = localStorage.getItem('openai_api_key');
+        
+        if (!apiKey) {
+            const key = prompt('Por favor, insira sua chave de API da OpenAI:');
+            if (!key) {
+                throw new Error('Chave de API não fornecida');
+            }
+            localStorage.setItem('openai_api_key', key);
+        }
+
+        // Construir mensagens para o ChatGPT com imagens em base64
+        const imagePromises = imagensParaIA.map(imgFile => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    // Adicionar a imagem como anexo
+                    const imageContent = e.target.result;
+                    
+                    // Adicionar aos anexos do caso
+                    const novoAnexo = {
+                        nome: imgFile.name,
+                        tipo: imgFile.type,
+                        tamanho: imgFile.size,
+                        conteudo: imageContent,
+                        dataAnexo: new Date().toISOString()
+                    };
+                    
+                    // Adicionar à lista de anexos
+                    arquivosParaAnexar.push(novoAnexo);
+                    
+                    resolve({
+                        type: "image_url",
+                        image_url: {
+                            url: imageContent,
+                            detail: "high"
+                        }
+                    });
+                };
+                reader.onerror = (e) => reject(e);
+                reader.readAsDataURL(imgFile);
+            });
+        });
+        
+        const imageContents = await Promise.all(imagePromises);
+        
+        // Atualizar a lista visual de anexos
+        atualizarListaArquivosSelecionados();
+        
+        const messages = [
+            {
+                role: "system", 
+                content: "Você é um assistente especializado em extrair informações de imagens de casos forenses. Em documentos oficiais, o número de REP é um identificador único que geralmente aparece carimbado no documento junto à palavra 'REP'. Extraia as seguintes informações se disponíveis: número de REP (apenas se estiver do lado da palavra 'REP'), endereço completo, nome da vítima, telefone da vítima, tipo de exame (Constatação de furto, Constatação de danos, etc) e um resumo do caso (descrição do que foi furtado ou danificado). Forneça apenas essas informações em formato JSON."
+            },
+            {
+                role: "user",
+                content: [
+                    {
+                        type: "text",
+                        text: "Analise estas imagens e extraia as seguintes informações: número de REP, endereço completo, nome da vítima, telefone da vítima, tipo de exame e um resumo do caso. IMPORTANTE: O número de REP deve ser extraído apenas quando estiver próximo à palavra 'REP' ou em um carimbo que contenha 'REP'. Se não houver menção explícita à palavra 'REP', deixe o campo de número REP vazio. Retorne APENAS no formato JSON como este exemplo: {\"rep\":\"12345\",\"endereco\":\"Rua Exemplo, 123\",\"nomeVitima\":\"Nome da Pessoa\",\"telefoneVitima\":\"(11) 99999-9999\",\"tipoExame\":\"Tipo do exame\",\"resumoCaso\":\"Breve resumo do caso\"}. Se algum campo não for encontrado, deixe-o como string vazia."
+                    },
+                    ...imageContents
+                ]
+            }
+        ];
+        
+        // Enviar para a API do ChatGPT
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: "gpt-4o",
+                messages: messages,
+                max_tokens: 1000
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Erro na API: ${response.status} - ${JSON.stringify(errorData)}`);
+        }
+        
+        const data = await response.json();
+        
+        // Extrair a resposta JSON
+        const assistantMessage = data.choices[0].message.content;
+        let extractedData;
+        
+        try {
+            // Tentar extrair JSON diretamente
+            extractedData = JSON.parse(assistantMessage);
+        } catch (e) {
+            // Se falhar, tentar encontrar um objeto JSON no texto
+            const jsonMatch = assistantMessage.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                extractedData = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('Não foi possível extrair dados JSON da resposta');
+            }
+        }
+        
+        // Preencher o formulário com os dados extraídos
+        if (extractedData.rep) document.getElementById('rep').value = extractedData.rep;
+        if (extractedData.endereco) document.getElementById('endereco').value = extractedData.endereco;
+        if (extractedData.nomeVitima) document.getElementById('nomeVitima').value = extractedData.nomeVitima;
+        if (extractedData.telefoneVitima) document.getElementById('telefoneVitima').value = extractedData.telefoneVitima;
+        if (extractedData.tipoExame) document.getElementById('tipoExame').value = extractedData.tipoExame;
+        if (extractedData.resumoCaso) document.getElementById('resumoCaso').value = extractedData.resumoCaso;
+        
+        // Mostrar mensagem de sucesso
+        alert(`Formulário preenchido com sucesso usando IA!\n\n${imagensParaIA.length} imagem(ns) foram processadas e anexadas ao caso.`);
+        
+    } catch (error) {
+        console.error('Erro ao processar imagens com IA:', error);
+        alert(`Erro ao processar imagens: ${error.message}`);
+    } finally {
+        // Restaurar o estado do botão
+        btnPreencherIA.innerHTML = btnTextoOriginal;
+        btnPreencherIA.disabled = false;
+    }
+}
+
+// Funções para configurar a API
+function configurarAPI() {
+    const apiKeyAtual = localStorage.getItem('openai_api_key') || '';
+    const novaChave = prompt('Digite sua chave da API da OpenAI:', apiKeyAtual);
+    
+    if (novaChave !== null) {
+        if (novaChave.trim() === '') {
+            localStorage.removeItem('openai_api_key');
+            alert('Chave da API removida');
+        } else {
+            localStorage.setItem('openai_api_key', novaChave.trim());
+            alert('Chave da API salva com sucesso!');
+        }
+    }
 }
 
 // Event Listeners
@@ -557,9 +708,10 @@ btnFecharForm.addEventListener('click', fecharModal);
 btnEditarPorRep.addEventListener('click', editarPorRep);
 btnExcluirPorRep.addEventListener('click', excluirPorRep);
 inputAnexos.addEventListener('change', processarArquivosSelecionados);
-btnCarregarPdfIA.addEventListener('click', carregarPdfsParaIA);
-inputPdfParaIA.addEventListener('change', processarPdfsSelecionados);
+btnCarregarImagemIA.addEventListener('click', carregarImagensParaIA);
+inputImagemParaIA.addEventListener('change', processarImagensSelecionadas);
 btnPreencherIA.addEventListener('click', preencherFormularioComIA);
+btnConfigAPI.addEventListener('click', configurarAPI);
 
 // Fechar modal quando clicar fora do conteúdo
 modalOverlay.addEventListener('click', function(e) {

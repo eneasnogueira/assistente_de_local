@@ -408,11 +408,25 @@ button i {
     cursor: not-allowed;
 }
 
+.btn-config {
+    background-color: #34495e;
+    color: white;
+    font-weight: bold;
+}
+
+.btn-config:hover {
+    background-color: #2c3e50;
+}
+
 .pdfs-carregados {
     margin-top: 10px;
 }
 
-.pdf-item {
+.imagens-carregadas {
+    margin-top: 10px;
+}
+
+.imagem-item {
     display: flex;
     align-items: center;
     padding: 8px;
@@ -422,7 +436,7 @@ button i {
     border: 1px solid #e0e0e0;
 }
 
-.pdf-item i {
-    color: #e74c3c;
+.imagem-item i {
+    color: #3498db;
     margin-right: 8px;
 } 
