@@ -510,44 +510,118 @@ function carregarImagensParaIA() {
     inputImagemParaIA.click();
 }
 
-// Função para processar imagens selecionadas
-function processarImagensSelecionadas(e) {
+// Função para processar arquivos selecionados (imagens ou PDFs)
+async function processarImagensSelecionadas(e) {
     const arquivos = e.target.files;
     
     if (arquivos.length === 0) return;
     
-    // Limpar a lista visual
-    imagensCarregadas.innerHTML = '';
-    // Limpar array de imagens
-    imagensParaIA = [];
+    // Mostrar indicador de carregamento
+    const btnTextoOriginal = btnCarregarImagemIA.innerHTML;
+    btnCarregarImagemIA.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando...';
+    btnCarregarImagemIA.disabled = true;
     
-    Array.from(arquivos).forEach(arquivo => {
-        // Verificar se o arquivo é uma imagem
-        if (!arquivo.type.startsWith('image/')) {
-            alert(`O arquivo "${arquivo.name}" não é uma imagem. Por favor, selecione apenas arquivos de imagem.`);
-            return;
+    try {
+        // Limpar a lista visual
+        imagensCarregadas.innerHTML = '';
+        // Limpar array de imagens
+        imagensParaIA = [];
+        
+        for (const arquivo of Array.from(arquivos)) {
+            if (arquivo.type.startsWith('image/')) {
+                // Se for uma imagem, adicionar diretamente
+                imagensParaIA.push(arquivo);
+                
+                // Adicionar à interface visual
+                const imgItem = document.createElement('div');
+                imgItem.className = 'imagem-item';
+                imgItem.innerHTML = `
+                    <i class="fa-solid fa-image"></i>
+                    <span>${arquivo.name}</span>
+                    <span class="tamanho-arquivo">(${formatarTamanhoArquivo(arquivo.size)})</span>
+                `;
+                
+                imagensCarregadas.appendChild(imgItem);
+            } else if (arquivo.type === 'application/pdf') {
+                // Se for um PDF, converter em imagens
+                try {
+                    // Adicionar um indicador de conversão para este PDF
+                    const pdfItem = document.createElement('div');
+                    pdfItem.className = 'pdf-convertendo';
+                    pdfItem.innerHTML = `
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>${arquivo.name}</span>
+                        <span class="status-conversao">Convertendo para imagem... <i class="fa-solid fa-spinner fa-spin"></i></span>
+                    `;
+                    imagensCarregadas.appendChild(pdfItem);
+                    
+                    // Anexar o PDF original ao caso
+                    const leitor = new FileReader();
+                    leitor.onload = function(e) {
+                        const novoAnexo = {
+                            nome: arquivo.name,
+                            tipo: arquivo.type,
+                            tamanho: arquivo.size,
+                            conteudo: e.target.result,
+                            dataAnexo: new Date().toISOString()
+                        };
+                        
+                        arquivosParaAnexar.push(novoAnexo);
+                    };
+                    leitor.readAsDataURL(arquivo);
+                    
+                    // Converter o PDF em imagens
+                    const imagens = await converterPdfParaImagens(arquivo);
+                    
+                    // Remover o indicador de conversão
+                    imagensCarregadas.removeChild(pdfItem);
+                    
+                    // Adicionar as imagens à lista
+                    imagens.forEach(imagem => {
+                        imagensParaIA.push(imagem);
+                        
+                        const imgItem = document.createElement('div');
+                        imgItem.className = 'imagem-item';
+                        imgItem.innerHTML = `
+                            <i class="fa-solid fa-image"></i>
+                            <span>${imagem.name}</span>
+                            <span class="tamanho-arquivo">(${formatarTamanhoArquivo(imagem.size)})</span>
+                        `;
+                        
+                        imagensCarregadas.appendChild(imgItem);
+                    });
+                } catch (error) {
+                    console.error(`Erro ao converter PDF ${arquivo.name}:`, error);
+                    
+                    // Mostrar erro na interface
+                    const erroPdfItem = document.createElement('div');
+                    erroPdfItem.className = 'pdf-erro';
+                    erroPdfItem.innerHTML = `
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>${arquivo.name}</span>
+                        <span class="erro-conversao">Erro na conversão: ${error.message}</span>
+                    `;
+                    imagensCarregadas.appendChild(erroPdfItem);
+                }
+            } else {
+                alert(`O arquivo "${arquivo.name}" não é uma imagem ou PDF. Por favor, selecione apenas arquivos de imagem ou PDF.`);
+            }
         }
         
-        // Adicionar à lista de imagens para IA
-        imagensParaIA.push(arquivo);
+    } catch (error) {
+        console.error('Erro ao processar arquivos:', error);
+        alert(`Erro ao processar arquivos: ${error.message}`);
+    } finally {
+        // Restaurar o estado do botão
+        btnCarregarImagemIA.innerHTML = btnTextoOriginal;
+        btnCarregarImagemIA.disabled = false;
         
-        // Adicionar à interface visual
-        const imgItem = document.createElement('div');
-        imgItem.className = 'imagem-item';
-        imgItem.innerHTML = `
-            <i class="fa-solid fa-image"></i>
-            <span>${arquivo.name}</span>
-            <span class="tamanho-arquivo">(${formatarTamanhoArquivo(arquivo.size)})</span>
-        `;
+        // Habilitar botão de preencher com IA se houver imagens carregadas
+        btnPreencherIA.disabled = imagensParaIA.length === 0;
         
-        imagensCarregadas.appendChild(imgItem);
-    });
-    
-    // Habilitar botão de preencher com IA se houver imagens carregadas
-    btnPreencherIA.disabled = imagensParaIA.length === 0;
-    
-    // Limpar o input de arquivo para permitir selecionar os mesmos arquivos novamente
-    e.target.value = '';
+        // Limpar o input de arquivo para permitir selecionar os mesmos arquivos novamente
+        e.target.value = '';
+    }
 }
 
 // Função para processar imagens com ChatGPT-4o
@@ -675,8 +749,11 @@ async function preencherFormularioComIA() {
         if (extractedData.tipoExame) document.getElementById('tipoExame').value = extractedData.tipoExame;
         if (extractedData.resumoCaso) document.getElementById('resumoCaso').value = extractedData.resumoCaso;
         
+        // Atualizar a lista visual de anexos (para garantir que todos os anexos estejam visíveis)
+        atualizarListaArquivosSelecionados();
+        
         // Mostrar mensagem de sucesso
-        alert(`Formulário preenchido com sucesso usando IA!\n\n${imagensParaIA.length} imagem(ns) foram processadas e anexadas ao caso.`);
+        alert(`Formulário preenchido com sucesso usando IA!\n\n${imagensParaIA.length} arquivo(s) foram processados e anexados ao caso.`);
         
     } catch (error) {
         console.error('Erro ao processar imagens com IA:', error);
@@ -750,5 +827,63 @@ function marcarComoConcluido(index) {
         
         // Atualizar a lista
         atualizarListaLocais();
+    }
+}
+
+// Função para converter um PDF em imagens
+async function converterPdfParaImagens(pdfFile) {
+    // Carregar a biblioteca
+    const pdfjsLib = window.pdfjsLib;
+    
+    // Configurar o caminho para o worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    
+    try {
+        // Ler o arquivo como array buffer
+        const arrayBuffer = await pdfFile.arrayBuffer();
+        
+        // Carregar o documento PDF
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        
+        const numPaginas = pdf.numPages;
+        const imagens = [];
+        
+        // Para cada página do PDF
+        for (let i = 1; i <= numPaginas; i++) {
+            // Obter a página
+            const pagina = await pdf.getPage(i);
+            
+            // Definir escala de renderização
+            const escala = 1.5;
+            const viewport = pagina.getViewport({ scale: escala });
+            
+            // Criar um canvas para renderizar a página
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            // Renderizar a página no canvas
+            await pagina.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+            
+            // Converter o canvas para uma imagem
+            const imagemData = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // Criar um arquivo de imagem a partir do Data URL
+            const resposta = await fetch(imagemData);
+            const blob = await resposta.blob();
+            const nomeImagem = `${pdfFile.name.replace('.pdf', '')}_pagina_${i}.jpg`;
+            const imagemFile = new File([blob], nomeImagem, { type: 'image/jpeg' });
+            
+            imagens.push(imagemFile);
+        }
+        
+        return imagens;
+    } catch (error) {
+        console.error("Erro ao converter PDF:", error);
+        throw new Error(`Não foi possível converter o PDF: ${error.message}`);
     }
 } 

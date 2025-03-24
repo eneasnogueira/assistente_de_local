@@ -6,6 +6,7 @@
     <title>Gerenciador de Locais</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -69,7 +70,7 @@
             <div class="ia-section">
                 <div class="ia-buttons">
                     <button type="button" id="btn-carregar-imagem-ia" class="btn-ia">
-                        <i class="fa-solid fa-image"></i> Carregar Imagens para IA
+                        <i class="fa-solid fa-file-import"></i> Carregar Imagens/PDFs para IA
                     </button>
                     <button type="button" id="btn-preencher-ia" class="btn-ia" disabled>
                         <i class="fa-solid fa-robot"></i> Preencher com IA
@@ -79,7 +80,7 @@
                     </button>
                 </div>
                 <div id="imagens-carregadas" class="imagens-carregadas"></div>
-                <input type="file" id="imagem-para-ia" accept="image/*" multiple style="display:none">
+                <input type="file" id="imagem-para-ia" accept="image/*,.pdf" multiple style="display:none">
             </div>
             <form id="local-form">
                 <div class="form-group">

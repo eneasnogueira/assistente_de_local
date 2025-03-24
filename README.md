@@ -6,8 +6,9 @@ Uma aplicação web simples para gerenciar locais visitados no trabalho, com fun
 
 - Visualização principal em formato de lista para todos os locais
 - Adicionar locais com campos obrigatórios (REP, endereço, status) e opcionais (dados da vítima e do caso)
-- Preenchimento automático de formulários usando ChatGPT para processar imagens
+- Preenchimento automático de formulários usando ChatGPT para processar imagens e PDFs
   - Integração direta com a API da OpenAI (GPT-4o) para extração de dados de imagens
+  - Conversão automática de PDFs para imagens para processamento visual
   - Processamento visual de documentos com visão computacional
   - Configuração da chave de API da OpenAI
 - Anexar arquivos a cada local (imagens, PDFs, documentos, etc.)
@@ -17,6 +18,7 @@ Uma aplicação web simples para gerenciar locais visitados no trabalho, com fun
 - Filtrar locais por status (Pendente ou Concluído)
 - Abrir o Google Maps para visualizar o endereço de um local
 - Editar ou excluir locais informando o número de REP
+- Marcar locais como concluídos diretamente da lista
 - Exportar todos os locais para um arquivo JSON
 - Importar locais de um arquivo JSON
 
@@ -46,9 +48,10 @@ Uma aplicação web simples para gerenciar locais visitados no trabalho, com fun
    - Preencha manualmente os campos ou use a opção de IA
    - Para usar IA:
      - Clique em "Configurar API" para adicionar sua chave da API da OpenAI
-     - Carregue imagens clicando em "Carregar Imagens para IA"
+     - Carregue imagens ou PDFs clicando em "Carregar Imagens/PDFs para IA"
+     - Os PDFs serão automaticamente convertidos em imagens para processamento
      - Clique em "Preencher com IA" para iniciar o processamento automático
-     - As imagens carregadas para a IA serão automaticamente anexadas ao caso
+     - As imagens e PDFs carregados serão automaticamente anexados ao caso
    - Anexe arquivos adicionais conforme necessário
 5. Use os botões na tabela para cada local:
    - Botão de expansão (+/-): expande a linha para mostrar os detalhes adicionais
@@ -65,11 +68,20 @@ A aplicação utiliza a API do ChatGPT (GPT-4o) da OpenAI para extrair informaç
 1. Você precisará de uma chave de API da OpenAI, que pode ser obtida em [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 2. Clique no botão "Configurar API" no formulário e insira sua chave
 3. A chave será armazenada localmente em seu navegador
-4. Carregue uma ou mais imagens usando o botão "Carregar Imagens para IA"
+4. Carregue uma ou mais imagens ou PDFs usando o botão "Carregar Imagens/PDFs para IA"
+   - Os arquivos PDF serão automaticamente convertidos em imagens para melhor processamento
 5. Clique em "Preencher com IA" para iniciar o processamento automático
 6. As imagens carregadas para a IA serão automaticamente anexadas ao caso
 
 O aplicativo enviará as imagens diretamente para a API da OpenAI, que analisará o conteúdo visual e extrairá as informações relevantes. O sistema foi configurado para identificar corretamente o número de REP apenas quando este estiver carimbado próximo à palavra "REP" no documento, evitando falsas identificações. Outras informações como endereço, dados da vítima e resumo do caso são extraídas da melhor forma possível com base no conteúdo das imagens.
+
+### Processamento de PDFs
+
+Quando você carrega um arquivo PDF:
+1. O sistema converte cada página do PDF em uma imagem JPEG de alta qualidade
+2. A conversão ocorre diretamente no navegador, sem enviar os PDFs para servidores externos
+3. As imagens geradas são então processadas pela IA como imagens normais
+4. Tanto as imagens convertidas quanto o PDF original são anexados ao caso
 
 **Nota sobre custos:** A utilização da API da OpenAI pode gerar custos conforme sua política de preços. Consulte a [documentação oficial](https://openai.com/pricing) para mais informações.
 
@@ -89,6 +101,7 @@ Os dados são armazenados localmente no seu navegador utilizando o localStorage.
 - CSS3
 - JavaScript (Vanilla)
 - Font Awesome para ícones
+- PDF.js para conversão de PDFs em imagens
 - localStorage para persistência de dados
 - FileReader API para importação/exportação e processamento de arquivos
 - Data URL para exibição de arquivos anexados

@@ -453,4 +453,46 @@ button i {
 .acoes-container {
     display: flex;
     gap: 5px;
+}
+
+.pdf-convertendo {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 5px;
+    background-color: #fff8e1;
+    border-radius: 4px;
+    border: 1px solid #ffe082;
+}
+
+.pdf-convertendo i {
+    color: #f39c12;
+    margin-right: 8px;
+}
+
+.status-conversao {
+    margin-left: 8px;
+    color: #f39c12;
+    font-style: italic;
+}
+
+.pdf-erro {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 5px;
+    background-color: #ffebee;
+    border-radius: 4px;
+    border: 1px solid #ffcdd2;
+}
+
+.pdf-erro i {
+    color: #e74c3c;
+    margin-right: 8px;
+}
+
+.erro-conversao {
+    margin-left: 8px;
+    color: #e74c3c;
+    font-style: italic;
 } 
