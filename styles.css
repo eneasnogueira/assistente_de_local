@@ -377,4 +377,52 @@ button i {
 
 .anexo-item a:hover {
     text-decoration: underline;
+}
+
+/* Estilos para seção de IA */
+.ia-section {
+    background-color: #f0f7fb;
+    border: 1px solid #d1e5f0;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.ia-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.btn-ia {
+    background-color: #9b59b6;
+    font-weight: bold;
+}
+
+.btn-ia:hover {
+    background-color: #8e44ad;
+}
+
+.btn-ia:disabled {
+    background-color: #d8bfd8;
+    cursor: not-allowed;
+}
+
+.pdfs-carregados {
+    margin-top: 10px;
+}
+
+.pdf-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 5px;
+    background-color: #fff;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+}
+
+.pdf-item i {
+    color: #e74c3c;
+    margin-right: 8px;
 } 

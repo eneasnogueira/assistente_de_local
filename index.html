@@ -18,9 +18,6 @@
                     <button id="btn-mostrar-form" class="btn-adicionar">
                         <i class="fa-solid fa-plus"></i> Adicionar Novo Local
                     </button>
-                    <button id="btn-adicionar-ia" class="btn-adicionar-ia">
-                        <i class="fa-solid fa-robot"></i> Adicionar Local por IA
-                    </button>
                     <button id="btn-editar-por-rep" class="btn-editar-global">
                         <i class="fa-solid fa-pen-to-square"></i> Editar Local
                     </button>
@@ -59,7 +56,6 @@
             <button id="salvar-arquivo">Salvar para Arquivo</button>
             <input type="file" id="carregar-arquivo" accept=".json" style="display:none">
             <button id="btn-carregar-arquivo">Carregar de Arquivo</button>
-            <input type="file" id="pdf-para-ia" accept=".pdf" multiple style="display:none">
         </div>
     </div>
 
@@ -69,6 +65,18 @@
             <div class="form-header">
                 <h2>Adicionar Novo Local</h2>
                 <button type="button" id="btn-fechar-form" class="btn-fechar">×</button>
+            </div>
+            <div class="ia-section">
+                <div class="ia-buttons">
+                    <button type="button" id="btn-carregar-pdf-ia" class="btn-ia">
+                        <i class="fa-solid fa-file-pdf"></i> Carregar PDFs para IA
+                    </button>
+                    <button type="button" id="btn-preencher-ia" class="btn-ia" disabled>
+                        <i class="fa-solid fa-robot"></i> Preencher com IA
+                    </button>
+                </div>
+                <div id="pdfs-carregados" class="pdfs-carregados"></div>
+                <input type="file" id="pdf-para-ia" accept=".pdf" multiple style="display:none">
             </div>
             <form id="local-form">
                 <div class="form-group">

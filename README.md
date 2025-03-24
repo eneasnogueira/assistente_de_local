@@ -6,7 +6,7 @@ Uma aplicação web simples para gerenciar locais visitados no trabalho, com fun
 
 - Visualização principal em formato de lista para todos os locais
 - Adicionar locais com campos obrigatórios (REP, endereço, status) e opcionais (dados da vítima e do caso)
-- Adicionar locais automaticamente através de processamento de PDFs por IA (em desenvolvimento)
+- Preenchimento automático de formulários usando IA para processar PDFs (em desenvolvimento)
 - Anexar arquivos a cada local (imagens, PDFs, documentos, etc.)
   - Possibilidade de anexar um arquivo de cada vez, mantendo os já anexados
   - Remoção individual de anexos
@@ -37,15 +37,18 @@ Uma aplicação web simples para gerenciar locais visitados no trabalho, com fun
 2. Visualize a lista de locais cadastrados
 3. Use os botões no topo da página:
    - **Adicionar Novo Local**: abre um modal para registrar um novo local
-   - **Adicionar Local por IA**: permite selecionar arquivos PDF para processamento automático (em desenvolvimento)
    - **Editar Local**: pede o número de REP e abre o formulário para edição
    - **Excluir Local**: pede o número de REP e remove o local correspondente
-4. Use os botões na tabela para cada local:
+4. No formulário de adição/edição:
+   - Preencha manualmente os campos ou use a opção de IA
+   - Para usar IA, primeiro carregue PDFs clicando em "Carregar PDFs para IA" e depois em "Preencher com IA"
+   - Anexe arquivos adicionais conforme necessário
+5. Use os botões na tabela para cada local:
    - Botão de expansão (+/-): expande a linha para mostrar os detalhes adicionais
    - Maps: abre o Google Maps com o endereço
-5. Na área expandida, é possível visualizar os detalhes do local, incluindo os arquivos anexados
+6. Na área expandida, é possível visualizar os detalhes do local, incluindo os arquivos anexados
    - Clique nos nomes dos arquivos para abri-los no navegador
-6. Use os botões na parte inferior para salvar ou carregar locais de arquivos
+7. Use os botões na parte inferior para salvar ou carregar locais de arquivos
 
 ## Armazenamento
 

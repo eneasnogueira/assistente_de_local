@@ -16,13 +16,16 @@ const btnEditarPorRep = document.getElementById('btn-editar-por-rep');
 const btnExcluirPorRep = document.getElementById('btn-excluir-por-rep');
 const inputAnexos = document.getElementById('anexos');
 const listaArquivosSelecionados = document.getElementById('lista-arquivos-selecionados');
-const btnAdicionarIA = document.getElementById('btn-adicionar-ia');
 const inputPdfParaIA = document.getElementById('pdf-para-ia');
+const btnCarregarPdfIA = document.getElementById('btn-carregar-pdf-ia');
+const btnPreencherIA = document.getElementById('btn-preencher-ia');
+const pdfsCarregados = document.getElementById('pdfs-carregados');
 
-// Variável para armazenar arquivos temporariamente
+// Variáveis para armazenar dados
 let arquivosParaAnexar = [];
 let modoEdicao = false;
 let localOriginal = null;
+let pdfsParaIA = [];
 
 // Funções
 function salvarNoLocalStorage() {
@@ -405,6 +408,11 @@ function abrirModal() {
         arquivosParaAnexar = [];
         listaArquivosSelecionados.innerHTML = '';
         
+        // Limpar PDFs para IA
+        pdfsParaIA = [];
+        pdfsCarregados.innerHTML = '';
+        btnPreencherIA.disabled = true;
+        
         // Se não estiver em modo de edição, resetar as variáveis de controle
         if (!modoEdicao) {
             localOriginal = null;
@@ -428,6 +436,11 @@ function fecharModal() {
     form.reset();
     arquivosParaAnexar = [];
     listaArquivosSelecionados.innerHTML = '';
+    
+    // Limpar PDFs para IA
+    pdfsParaIA = [];
+    pdfsCarregados.innerHTML = '';
+    btnPreencherIA.disabled = true;
 }
 
 function salvarParaArquivo() {
@@ -484,17 +497,53 @@ function carregarDeArquivo(e) {
     e.target.value = '';
 }
 
-// Funções para o processamento de PDFs por IA
-function processarPdfsPorIA(e) {
+// Funções para processamento de PDFs com IA
+function carregarPdfsParaIA() {
+    inputPdfParaIA.click();
+}
+
+function processarPdfsSelecionados(e) {
     const arquivos = e.target.files;
     
     if (arquivos.length === 0) return;
     
-    const nomeArquivos = Array.from(arquivos).map(arquivo => arquivo.name).join(', ');
-    alert(`Arquivos PDF selecionados: ${nomeArquivos}\n\nO processamento por IA será implementado em uma etapa futura.`);
+    // Limpar a lista visual
+    pdfsCarregados.innerHTML = '';
+    // Limpar array de PDFs
+    pdfsParaIA = [];
     
-    // Limpar o input para permitir selecionar os mesmos arquivos novamente
+    Array.from(arquivos).forEach(arquivo => {
+        // Adicionar à lista de PDFs para IA
+        pdfsParaIA.push(arquivo);
+        
+        // Adicionar à interface visual
+        const pdfItem = document.createElement('div');
+        pdfItem.className = 'pdf-item';
+        pdfItem.innerHTML = `
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>${arquivo.name}</span>
+            <span class="tamanho-arquivo">(${formatarTamanhoArquivo(arquivo.size)})</span>
+        `;
+        
+        pdfsCarregados.appendChild(pdfItem);
+    });
+    
+    // Habilitar botão de preencher com IA se houver PDFs carregados
+    btnPreencherIA.disabled = pdfsParaIA.length === 0;
+    
+    // Limpar o input de arquivo para permitir selecionar os mesmos arquivos novamente
     e.target.value = '';
+}
+
+function preencherFormularioComIA() {
+    if (pdfsParaIA.length === 0) {
+        alert('Você precisa carregar PDFs antes de usar a IA!');
+        return;
+    }
+    
+    // Aqui seria implementada a lógica de processamento por IA
+    // Por enquanto apenas mostramos um alerta
+    alert(`Processando ${pdfsParaIA.length} PDF(s) com IA...\nEsta funcionalidade será implementada futuramente.`);
 }
 
 // Event Listeners
@@ -508,8 +557,9 @@ btnFecharForm.addEventListener('click', fecharModal);
 btnEditarPorRep.addEventListener('click', editarPorRep);
 btnExcluirPorRep.addEventListener('click', excluirPorRep);
 inputAnexos.addEventListener('change', processarArquivosSelecionados);
-btnAdicionarIA.addEventListener('click', () => inputPdfParaIA.click());
-inputPdfParaIA.addEventListener('change', processarPdfsPorIA);
+btnCarregarPdfIA.addEventListener('click', carregarPdfsParaIA);
+inputPdfParaIA.addEventListener('change', processarPdfsSelecionados);
+btnPreencherIA.addEventListener('click', preencherFormularioComIA);
 
 // Fechar modal quando clicar fora do conteúdo
 modalOverlay.addEventListener('click', function(e) {
