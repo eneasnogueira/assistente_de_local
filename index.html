@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciador de Locais</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,7 +14,17 @@
         <div class="list-container">
             <div class="header-actions">
                 <h2>Meus Locais</h2>
-                <button id="btn-mostrar-form" class="btn-adicionar">Adicionar Novo Local</button>
+                <div class="botoes-principais">
+                    <button id="btn-mostrar-form" class="btn-adicionar">
+                        <i class="fa-solid fa-plus"></i> Adicionar Novo Local
+                    </button>
+                    <button id="btn-editar-por-rep" class="btn-editar-global">
+                        <i class="fa-solid fa-pen-to-square"></i> Editar Local
+                    </button>
+                    <button id="btn-excluir-por-rep" class="btn-delete-global">
+                        <i class="fa-solid fa-trash"></i> Excluir Local
+                    </button>
+                </div>
             </div>
             
             <div class="filter-container">
@@ -28,6 +39,7 @@
             <table id="tabela-locais">
                 <thead>
                     <tr>
+                        <th></th>
                         <th>REP</th>
                         <th>Endereço</th>
                         <th>Status</th>
@@ -40,7 +52,16 @@
             </table>
         </div>
 
-        <div class="form-container" id="form-container" style="display: none;">
+        <div class="buttons-container">
+            <button id="salvar-arquivo">Salvar para Arquivo</button>
+            <input type="file" id="carregar-arquivo" accept=".json" style="display:none">
+            <button id="btn-carregar-arquivo">Carregar de Arquivo</button>
+        </div>
+    </div>
+
+    <!-- Modal do formulário -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div id="form-container" class="modal-content">
             <div class="form-header">
                 <h2>Adicionar Novo Local</h2>
                 <button type="button" id="btn-fechar-form" class="btn-fechar">×</button>
@@ -61,14 +82,24 @@
                         <option value="concluido">Concluído</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="nomeVitima">Nome da vítima:</label>
+                    <input type="text" id="nomeVitima">
+                </div>
+                <div class="form-group">
+                    <label for="telefoneVitima">Telefone da vítima:</label>
+                    <input type="tel" id="telefoneVitima">
+                </div>
+                <div class="form-group">
+                    <label for="tipoExame">Tipo de exame:</label>
+                    <input type="text" id="tipoExame">
+                </div>
+                <div class="form-group">
+                    <label for="resumoCaso">Resumo do caso:</label>
+                    <textarea id="resumoCaso" rows="4"></textarea>
+                </div>
                 <button type="submit">Adicionar</button>
             </form>
-        </div>
-
-        <div class="buttons-container">
-            <button id="salvar-arquivo">Salvar para Arquivo</button>
-            <input type="file" id="carregar-arquivo" accept=".json" style="display:none">
-            <button id="btn-carregar-arquivo">Carregar de Arquivo</button>
         </div>
     </div>
 

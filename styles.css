@@ -40,6 +40,27 @@ h2 {
     padding-bottom: 10px;
 }
 
+.botoes-principais {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-editar-global {
+    background-color: #f39c12;
+}
+
+.btn-editar-global:hover {
+    background-color: #d35400;
+}
+
+.btn-delete-global {
+    background-color: #e74c3c;
+}
+
+.btn-delete-global:hover {
+    background-color: #c0392b;
+}
+
 .form-header {
     display: flex;
     justify-content: space-between;
@@ -92,12 +113,18 @@ label {
     font-weight: bold;
 }
 
-input, select {
+input, select, textarea {
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: Arial, sans-serif;
 }
 
 button {
@@ -158,6 +185,10 @@ table th {
     background-color: #d35400;
 }
 
+.btn-detalhes {
+    display: none;
+}
+
 .filter-container {
     margin-bottom: 15px;
 }
@@ -177,4 +208,117 @@ table th {
 .status-concluido {
     color: #27ae60;
     font-weight: bold;
+}
+
+/* Estilos para o modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-visible {
+    display: flex;
+}
+
+/* Estilos para a expansão de detalhes */
+.expandir-col {
+    width: 40px;
+    text-align: center;
+}
+
+.btn-expandir {
+    background-color: #eaf2f8;
+    color: #3498db;
+    border: 1px solid #d6eaf8;
+    border-radius: 50%;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-expandir:hover {
+    background-color: #d6eaf8;
+}
+
+.btn-desativado {
+    background-color: #f0f0f0;
+    color: #aaa;
+    border-color: #e0e0e0;
+    cursor: default;
+}
+
+.btn-desativado:hover {
+    background-color: #f0f0f0;
+}
+
+button i {
+    margin-right: 4px;
+}
+
+.btn-expandir i {
+    margin-right: 0;
+}
+
+.detalhe-label i {
+    width: 18px;
+    text-align: center;
+    margin-right: 4px;
+    color: #3498db;
+}
+
+.expandir-icon {
+    display: inline-block;
+    color: #3498db;
+}
+
+.linha-detalhes {
+    background-color: #f9f9f9;
+}
+
+.detalhes-container {
+    padding: 15px 15px 15px 40px;
+    border-bottom: 1px solid #ddd;
+}
+
+.detalhe-item {
+    margin-bottom: 10px;
+}
+
+.detalhe-label {
+    font-weight: bold;
+    color: #333;
+}
+
+.detalhe-resumo {
+    margin-top: 5px;
+    white-space: pre-line;
+    padding: 8px;
+    background-color: white;
+    border-radius: 4px;
+    border: 1px solid #eee;
 } 
