@@ -1560,7 +1560,7 @@ function mudarStatusLocal(localId) {
                     <button type="button" class="btn-fechar-modal">&times;</button>
                 </div>
                 
-                <div class="form-group caso-detalhes">
+                <div class="form-group">
                     <p><strong>REP:</strong> ${local.rep}</p>
                     <p><strong>Endereço:</strong> ${local.endereco}</p>
                     
