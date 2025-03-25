@@ -344,6 +344,7 @@ function atualizarListaLocais() {
                     local.status === 'atendido' ? 'Atendido' : 
                     'Arquivado'}
                     ${local.anotacoes ? ' <i class="fa-solid fa-note-sticky"></i>' : ''}
+                    ${local.preservacao && local.preservacao.preservado === 'sim' ? ' <i class="fa-solid fa-shield-alt" style="color: #27ae60;" title="Local preservado"></i>' : ''}
                 </span>
             </td>
             <td>
@@ -1131,6 +1132,7 @@ function atualizarListaLocaisAgrupados() {
                     local.status === 'atendido' ? 'Atendido' : 
                     'Arquivado'}
                     ${local.anotacoes ? ' <i class="fa-solid fa-note-sticky"></i>' : ''}
+                    ${local.preservacao && local.preservacao.preservado === 'sim' ? ' <i class="fa-solid fa-shield-alt" style="color: #27ae60;" title="Local preservado"></i>' : ''}
                 </span>
             </td>
             <td>
@@ -1262,6 +1264,51 @@ function mudarStatusLocal(localId) {
                     <strong>Endereço:</strong> ${local.endereco}
                 </div>
                 <textarea id="anotacoes-caso" rows="6" placeholder="Digite as anotações do caso..." style="width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; font-family: inherit; font-size: 15px; resize: vertical; min-height: 150px; line-height: 1.5;">${local.anotacoes || ''}</textarea>
+                
+                <div class="preservacao-container" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <label style="font-weight: bold; margin-right: 10px;">Preservado:</label>
+                        <div style="display: flex; gap: 15px;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="preservado" value="não" checked id="preservado-nao" style="margin-right: 5px;">
+                                Não
+                            </label>
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="preservado" value="sim" id="preservado-sim" style="margin-right: 5px;">
+                                Sim
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="campos-preservacao" style="display: none;">
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 16px;">Equipe de Preservação</h4>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px;">Oficial</label>
+                                    <input type="text" id="preservacao-oficial" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px;">Registro</label>
+                                    <input type="text" id="preservacao-registro" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px;">Viatura</label>
+                                    <input type="text" id="preservacao-viatura" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 16px;">Autoridade no Local</h4>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px;">Delegado</label>
+                                <input type="text" id="preservacao-delegado" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="modal-buttons">
                     <button class="btn-cancelar" style="background-color: #e74c3c; color: white; min-width: 120px; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 15px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <i class="fa-solid fa-times"></i>
@@ -1277,6 +1324,33 @@ function mudarStatusLocal(localId) {
         
         document.body.appendChild(modal);
         
+        // Controle de exibição dos campos de preservação
+        const preservadoSimRadio = modal.querySelector('#preservado-sim');
+        const preservadoNaoRadio = modal.querySelector('#preservado-nao');
+        const camposPreservacao = modal.querySelector('#campos-preservacao');
+        
+        // Se o local já tiver informações de preservação, carregar os valores
+        if (local.preservacao) {
+            if (local.preservacao.preservado === 'sim') {
+                preservadoSimRadio.checked = true;
+                camposPreservacao.style.display = 'block';
+                
+                if (local.preservacao.oficial) modal.querySelector('#preservacao-oficial').value = local.preservacao.oficial;
+                if (local.preservacao.registro) modal.querySelector('#preservacao-registro').value = local.preservacao.registro;
+                if (local.preservacao.viatura) modal.querySelector('#preservacao-viatura').value = local.preservacao.viatura;
+                if (local.preservacao.delegado) modal.querySelector('#preservacao-delegado').value = local.preservacao.delegado;
+            }
+        }
+        
+        // Eventos para mostrar/esconder campos de preservação
+        preservadoSimRadio.addEventListener('change', () => {
+            camposPreservacao.style.display = 'block';
+        });
+        
+        preservadoNaoRadio.addEventListener('change', () => {
+            camposPreservacao.style.display = 'none';
+        });
+        
         // Eventos dos botões
         const fecharModal = () => {
             document.body.removeChild(modal);
@@ -1288,9 +1362,25 @@ function mudarStatusLocal(localId) {
         modal.querySelector('.btn-confirmar').addEventListener('click', () => {
             const anotacoes = document.getElementById('anotacoes-caso').value;
             
+            // Verificar se o local está preservado
+            const preservado = preservadoSimRadio.checked ? 'sim' : 'não';
+            
             // Atualizar o local diretamente no array
             locais[localIndex].anotacoes = anotacoes;
             locais[localIndex].status = 'atendido';
+            
+            // Adicionar informações de preservação
+            locais[localIndex].preservacao = {
+                preservado: preservado
+            };
+            
+            // Se preservado, adicionar informações da equipe e delegado
+            if (preservado === 'sim') {
+                locais[localIndex].preservacao.oficial = document.getElementById('preservacao-oficial').value;
+                locais[localIndex].preservacao.registro = document.getElementById('preservacao-registro').value;
+                locais[localIndex].preservacao.viatura = document.getElementById('preservacao-viatura').value;
+                locais[localIndex].preservacao.delegado = document.getElementById('preservacao-delegado').value;
+            }
             
             salvarNoLocalStorage();
             
@@ -1310,39 +1400,8 @@ function mudarStatusLocal(localId) {
                 fecharModal();
             }
         });
-    } else if (local.status === 'atendido' && local.anotacoes) {
-        // Mostrar anotações em um modal
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        modal.style.display = 'flex';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
-        modal.style.zIndex = '1000';
-        
-        modal.innerHTML = `
-            <div class="modal-content anotacoes-modal" style="background-color: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-                <h3>Anotações do Caso</h3>
-                <div class="anotacoes-conteudo">${local.anotacoes}</div>
-                <div class="modal-buttons">
-                    <button class="btn-fechar">Fechar</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Evento do botão fechar
-        modal.querySelector('.btn-fechar').addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
     } else if (local.status === 'atendido' || local.status === 'arquivado') {
-        // Caso não tenha anotações
+        // Mostrar modal para anotações
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.position = 'fixed';
@@ -1355,15 +1414,19 @@ function mudarStatusLocal(localId) {
         modal.style.justifyContent = 'center';
         modal.style.alignItems = 'center';
         modal.style.zIndex = '1000';
+        
+        // Verificar se há informações de preservação
+        const temPreservacao = local.preservacao && local.preservacao.preservado === 'sim';
+        const temAnotacoes = local.anotacoes && local.anotacoes.trim() !== '';
         
         modal.innerHTML = `
             <div class="modal-content anotacoes-modal" style="background-color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                 <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3>
-                        <i class="fa-solid fa-note-sticky"></i>
+                        <i class="fa-solid fa-note-sticky" style="color: #3498db; margin-right: 10px;"></i>
                         Anotações do Caso
                     </h3>
-                    <button class="btn-fechar-modal">
+                    <button class="btn-fechar-modal" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 20px; color: #666;">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -1371,10 +1434,52 @@ function mudarStatusLocal(localId) {
                     <strong>REP:</strong> ${local.rep}<br>
                     <strong>Endereço:</strong> ${local.endereco}
                 </div>
-                <div class="anotacoes-conteudo sem-anotacoes">
-                    <i class="fa-solid fa-info-circle"></i>
-                    <p>Este caso não possui anotações.</p>
+                
+                ${temAnotacoes ? 
+                    `<div class="anotacoes-conteudo">${local.anotacoes}</div>` : 
+                    `<div class="anotacoes-conteudo" style="text-align: center; padding: 30px;">
+                        <i class="fa-solid fa-info-circle" style="font-size: 32px; color: #3498db; margin-bottom: 15px; display: block;"></i>
+                        <p style="font-size: 16px; color: #666;">Este caso não possui anotações.</p>
+                    </div>`
+                }
+                
+                ${local.preservacao ? `
+                <div class="preservacao-info" style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 16px; display: flex; align-items: center;">
+                        <i class="fa-solid fa-shield-alt" style="margin-right: 8px; color: ${temPreservacao ? '#27ae60' : '#e74c3c'};"></i>
+                        Preservação: <span style="margin-left: 5px; color: ${temPreservacao ? '#27ae60' : '#e74c3c'};">${local.preservacao.preservado === 'sim' ? 'Sim' : 'Não'}</span>
+                    </h4>
+                    
+                    ${temPreservacao ? `
+                    <div style="margin-top: 15px;">
+                        <h5 style="margin-top: 0; margin-bottom: 10px; font-size: 14px;">Equipe de Preservação:</h5>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div>
+                                <span style="font-weight: bold; display: block;">Oficial:</span>
+                                <span>${local.preservacao.oficial || '-'}</span>
+                            </div>
+                            <div>
+                                <span style="font-weight: bold; display: block;">Registro:</span>
+                                <span>${local.preservacao.registro || '-'}</span>
+                            </div>
+                            <div>
+                                <span style="font-weight: bold; display: block;">Viatura:</span>
+                                <span>${local.preservacao.viatura || '-'}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <h5 style="margin-top: 0; margin-bottom: 10px; font-size: 14px;">Autoridade no Local:</h5>
+                            <div>
+                                <span style="font-weight: bold; display: block;">Delegado:</span>
+                                <span>${local.preservacao.delegado || '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
+                ` : ''}
+                
                 <div class="modal-buttons">
                     <button class="btn-fechar">
                         <i class="fa-solid fa-check"></i>
