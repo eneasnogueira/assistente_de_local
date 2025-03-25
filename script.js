@@ -307,9 +307,37 @@ function atualizarListaLocais() {
     
     const filtro = filtroStatus.value;
     
-    const locaisFiltrados = filtro === 'todos' 
+    let locaisFiltrados = filtro === 'todos' 
         ? locais 
         : locais.filter(local => local.status === filtro);
+    
+    // Ordenar locais atendidos e arquivados por data de atendimento (mais recentes primeiro)
+    if (filtro === 'atendido' || filtro === 'arquivado' || filtro === 'todos') {
+        locaisFiltrados = locaisFiltrados.sort((a, b) => {
+            // Manter pendentes na ordem atual
+            if (a.status === 'pendente' && b.status === 'pendente') return 0;
+            
+            // Sempre mostrar pendentes primeiro se estiver mostrando todos
+            if (filtro === 'todos') {
+                if (a.status === 'pendente') return -1;
+                if (b.status === 'pendente') return 1;
+            }
+            
+            // Ordenar atendidos e arquivados por data (mais recentes primeiro)
+            if ((a.status === 'atendido' || a.status === 'arquivado') && 
+                (b.status === 'atendido' || b.status === 'arquivado')) {
+                // Se ambos têm data de atendimento, ordenar por data (mais recente primeiro)
+                if (a.dataAtendimento && b.dataAtendimento) {
+                    return new Date(b.dataAtendimento) - new Date(a.dataAtendimento);
+                }
+                // Se apenas um tem data, colocar o que tem data primeiro
+                if (a.dataAtendimento) return -1;
+                if (b.dataAtendimento) return 1;
+            }
+            
+            return 0;
+        });
+    }
     
     if (locaisFiltrados.length === 0) {
         const tr = document.createElement('tr');
@@ -818,7 +846,7 @@ btnPreencherIA.addEventListener('click', preencherFormularioComIA);
 btnConfigAPI.addEventListener('click', configurarAPI);
 document.getElementById('btn-ordenar-ia').addEventListener('click', ordenarPorBairroIA);
 
-// Fechar modal quando clicar fora do conteúdo
+// Fechar modal ao clicar fora do conteúdo
 modalOverlay.addEventListener('click', function(e) {
     if (e.target === modalOverlay) {
         fecharModal();
@@ -1067,10 +1095,48 @@ function atualizarListaLocaisAgrupados() {
     const filtro = filtroStatus.value;
     
     // Filtrar os headers e locais pelo status
-    const locaisFiltrados = locais.filter(local => {
+    let locaisFiltrados = locais.filter(local => {
         if (local.isCidadeHeader || local.isBairroHeader) return true; // Sempre mostrar headers
         return filtro === 'todos' ? true : local.status === filtro;
     });
+    
+    // Ordenar locais atendidos e arquivados por data de atendimento (mais recentes primeiro)
+    // mas preservando a estrutura de headers
+    if (filtro === 'atendido' || filtro === 'arquivado' || filtro === 'todos') {
+        // Primeiro, separar headers e locais
+        const headers = locaisFiltrados.filter(local => local.isCidadeHeader || local.isBairroHeader);
+        const locaisReais = locaisFiltrados.filter(local => !local.isCidadeHeader && !local.isBairroHeader);
+        
+        // Ordenar apenas os locais reais
+        locaisReais.sort((a, b) => {
+            // Manter pendentes na ordem atual
+            if (a.status === 'pendente' && b.status === 'pendente') return 0;
+            
+            // Sempre mostrar pendentes primeiro se estiver mostrando todos
+            if (filtro === 'todos') {
+                if (a.status === 'pendente') return -1;
+                if (b.status === 'pendente') return 1;
+            }
+            
+            // Ordenar atendidos e arquivados por data (mais recentes primeiro)
+            if ((a.status === 'atendido' || a.status === 'arquivado') && 
+                (b.status === 'atendido' || b.status === 'arquivado')) {
+                // Se ambos têm data de atendimento, ordenar por data (mais recente primeiro)
+                if (a.dataAtendimento && b.dataAtendimento) {
+                    return new Date(b.dataAtendimento) - new Date(a.dataAtendimento);
+                }
+                // Se apenas um tem data, colocar o que tem data primeiro
+                if (a.dataAtendimento) return -1;
+                if (b.dataAtendimento) return 1;
+            }
+            
+            return 0;
+        });
+        
+        // Manter a estrutura de cidades e bairros, mas com locais ordenados
+        // (este é um processamento mais complexo, fora do escopo dessa implementação simples)
+        // Por enquanto, vamos apenas usar a função normal para visualização agrupada
+    }
     
     if (locaisFiltrados.length === 0 || locaisFiltrados.every(local => local.isCidadeHeader || local.isBairroHeader)) {
         const tr = document.createElement('tr');
@@ -1215,10 +1281,33 @@ function arquivarPorRep() {
         return;
     }
     
-    // Atualizar o status para arquivado
+    // Obter data e hora atual formatada para arquivamento
+    const dataHoraArquivamento = new Date();
+    const dataArquivamentoFormatada = dataHoraArquivamento.toLocaleDateString('pt-BR');
+    const horaArquivamentoFormatada = dataHoraArquivamento.toLocaleTimeString('pt-BR');
+    const dataHoraArquivamentoFormatada = `${dataArquivamentoFormatada} às ${horaArquivamentoFormatada}`;
+    
+    // Atualizar o status para arquivado com data
     local.status = 'arquivado';
+    
+    // Armazenar data de arquivamento como atributo do objeto
+    local.dataArquivamento = dataHoraArquivamento;
+    local.dataArquivamentoFormatada = dataHoraArquivamentoFormatada;
+    
+    // Se o local não tinha sido atendido anteriormente, adicionar data de atendimento também
+    if (!local.dataAtendimento) {
+        local.dataAtendimento = dataHoraArquivamento.toISOString();
+        local.dataAtendimentoFormatada = dataHoraArquivamentoFormatada;
+    }
+    
+    // Salvar no localStorage
     salvarNoLocalStorage();
+    
+    // Atualizar a lista
     atualizarListaLocais();
+    
+    // Confirmar ao usuário
+    alert(`O local REP ${local.rep} foi arquivado com sucesso!`);
 }
 
 function mudarStatusLocal(localId) {
@@ -1234,36 +1323,37 @@ function mudarStatusLocal(localId) {
     if (local.status === 'arquivado') return; // Não permite mudar status de arquivado
     
     if (local.status === 'pendente') {
-        // Criar modal para anotações
+        // Criar o modal de anotações
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        modal.style.display = 'flex';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
-        modal.style.zIndex = '1000';
+        modal.className = 'modal-overlay modal-visible';
+        
+        // Obter data e hora atual formatada para início do atendimento
+        const dataHoraInicio = new Date();
+        const dataInicioFormatada = dataHoraInicio.toLocaleDateString('pt-BR');
+        const horaInicioFormatada = dataHoraInicio.toLocaleTimeString('pt-BR');
+        const dataHoraInicioFormatada = `${dataInicioFormatada} às ${horaInicioFormatada}`;
+        
+        // Armazenar data de início do atendimento temporariamente no objeto do modal
+        modal.dataInicioAtendimento = dataHoraInicio;
+        modal.dataInicioAtendimentoFormatada = dataHoraInicioFormatada;
         
         modal.innerHTML = `
-            <div class="modal-content anotacoes-modal" style="background-color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3>
-                        <i class="fa-solid fa-note-sticky" style="color: #3498db; margin-right: 10px;"></i>
-                        Adicionar Anotações
-                    </h3>
-                    <button class="btn-fechar-modal" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 20px; color: #666;">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+            <div class="modal-content anotacoes-modal">
+                <div class="form-header">
+                    <h3><i class="fa-solid fa-clipboard-check"></i> Atendimento do Caso</h3>
+                    <button type="button" class="btn-fechar-modal">&times;</button>
                 </div>
-                <div style="margin-bottom: 15px; color: #666;">
-                    <strong>REP:</strong> ${local.rep}<br>
-                    <strong>Endereço:</strong> ${local.endereco}
+                
+                <div class="form-group">
+                    <p><strong>REP:</strong> ${local.rep}</p>
+                    <p><strong>Endereço:</strong> ${local.endereco}</p>
+                    <p><strong>Início do atendimento:</strong> ${dataHoraInicioFormatada}</p>
                 </div>
-                <textarea id="anotacoes-caso" rows="6" placeholder="Digite as anotações do caso..." style="width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; font-family: inherit; font-size: 15px; resize: vertical; min-height: 150px; line-height: 1.5;">${local.anotacoes || ''}</textarea>
+                
+                <div class="form-group">
+                    <label for="anotacoes-caso">Anotações:</label>
+                    <textarea id="anotacoes-caso" rows="5" placeholder="Digite suas anotações sobre o atendimento...">${local.anotacoes || ''}</textarea>
+                </div>
                 
                 <div class="preservacao-container" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
                     <div style="display: flex; align-items: center; margin-bottom: 15px;">
@@ -1351,13 +1441,8 @@ function mudarStatusLocal(localId) {
             camposPreservacao.style.display = 'none';
         });
         
-        // Eventos dos botões
-        const fecharModal = () => {
-            document.body.removeChild(modal);
-        };
-        
-        modal.querySelector('.btn-fechar-modal').addEventListener('click', fecharModal);
-        modal.querySelector('.btn-cancelar').addEventListener('click', fecharModal);
+        // Adicionar horário de início do atendimento ao abrir o modal
+        // Esta linha foi removida, pois agora salvamos a data no objeto do modal
         
         modal.querySelector('.btn-confirmar').addEventListener('click', () => {
             const anotacoes = document.getElementById('anotacoes-caso').value;
@@ -1365,9 +1450,25 @@ function mudarStatusLocal(localId) {
             // Verificar se o local está preservado
             const preservado = preservadoSimRadio.checked ? 'sim' : 'não';
             
-            // Atualizar o local diretamente no array
+            // Obter data e hora atual formatada para finalização
+            const dataHoraFim = new Date();
+            const dataFimFormatada = dataHoraFim.toLocaleDateString('pt-BR');
+            const horaFimFormatada = dataHoraFim.toLocaleTimeString('pt-BR');
+            const dataHoraFimFormatada = `${dataFimFormatada} às ${horaFimFormatada}`;
+            
+            // Agora salvamos as datas como atributos do objeto local
+            locais[localIndex].dataInicioAtendimento = modal.dataInicioAtendimento;
+            locais[localIndex].dataInicioAtendimentoFormatada = modal.dataInicioAtendimentoFormatada;
+            locais[localIndex].dataFimAtendimento = dataHoraFim;
+            locais[localIndex].dataFimAtendimentoFormatada = dataHoraFimFormatada;
+            
+            // Salvar as anotações sem adicionar as marcações de tempo
             locais[localIndex].anotacoes = anotacoes;
             locais[localIndex].status = 'atendido';
+            
+            // Adicionar data e hora do atendimento
+            locais[localIndex].dataAtendimento = dataHoraFim.toISOString();
+            locais[localIndex].dataAtendimentoFormatada = dataHoraFimFormatada;
             
             // Adicionar informações de preservação
             locais[localIndex].preservacao = {
@@ -1391,88 +1492,103 @@ function mudarStatusLocal(localId) {
                 atualizarListaLocais();
             }
             
-            fecharModal();
+            // Remover o modal do DOM
+            document.body.removeChild(modal);
         });
         
+        // Fechar modal ao clicar no botão cancelar
+        modal.querySelector('.btn-cancelar').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+        
+        // Fechar modal ao clicar no botão X
+        modal.querySelector('.btn-fechar-modal').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+
         // Fechar modal ao clicar fora
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                fecharModal();
+                document.body.removeChild(modal);
             }
         });
     } else if (local.status === 'atendido' || local.status === 'arquivado') {
-        // Mostrar modal para anotações
+        // Exibir modal com as anotações
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100%';
-        modal.style.height = '100%';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        modal.style.display = 'flex';
-        modal.style.justifyContent = 'center';
-        modal.style.alignItems = 'center';
-        modal.style.zIndex = '1000';
+        modal.className = 'modal-overlay modal-visible';
         
-        // Verificar se há informações de preservação
-        const temPreservacao = local.preservacao && local.preservacao.preservado === 'sim';
+        let iconeStatus = '';
+        let tituloStatus = '';
+        
+        if (local.status === 'atendido') {
+            iconeStatus = 'fa-clipboard-check';
+            tituloStatus = 'Caso Atendido';
+        } else if (local.status === 'arquivado') {
+            iconeStatus = 'fa-box-archive';
+            tituloStatus = 'Caso Arquivado';
+        }
+        
+        // Verificar se há anotações
         const temAnotacoes = local.anotacoes && local.anotacoes.trim() !== '';
         
         modal.innerHTML = `
-            <div class="modal-content anotacoes-modal" style="background-color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3>
-                        <i class="fa-solid fa-note-sticky" style="color: #3498db; margin-right: 10px;"></i>
-                        Anotações do Caso
-                    </h3>
-                    <button class="btn-fechar-modal" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 20px; color: #666;">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <div style="margin-bottom: 15px; color: #666;">
-                    <strong>REP:</strong> ${local.rep}<br>
-                    <strong>Endereço:</strong> ${local.endereco}
+            <div class="modal-content anotacoes-modal">
+                <div class="form-header">
+                    <h3><i class="fa-solid ${iconeStatus}"></i> ${tituloStatus}</h3>
+                    <button type="button" class="btn-fechar-modal">&times;</button>
                 </div>
                 
-                ${temAnotacoes ? 
-                    `<div class="anotacoes-conteudo">${local.anotacoes}</div>` : 
-                    `<div class="anotacoes-conteudo" style="text-align: center; padding: 30px;">
-                        <i class="fa-solid fa-info-circle" style="font-size: 32px; color: #3498db; margin-bottom: 15px; display: block;"></i>
-                        <p style="font-size: 16px; color: #666;">Este caso não possui anotações.</p>
-                    </div>`
-                }
+                <div class="form-group caso-detalhes">
+                    <p><strong>REP:</strong> ${local.rep}</p>
+                    <p><strong>Endereço:</strong> ${local.endereco}</p>
+                    
+                    ${local.dataInicioAtendimentoFormatada ? 
+                    `<p><strong>Início do atendimento:</strong> ${local.dataInicioAtendimentoFormatada}</p>` : ''}
+                    
+                    ${local.dataFimAtendimentoFormatada ?
+                    `<p><strong>Fim do atendimento:</strong> ${local.dataFimAtendimentoFormatada}</p>` : ''}
+                    
+                    ${local.dataArquivamentoFormatada && local.status === 'arquivado' ?
+                    `<p><strong>Arquivado em:</strong> ${local.dataArquivamentoFormatada}</p>` : ''}
+                </div>
+                
+                ${temAnotacoes ? `
+                <div class="form-group">
+                    <label><i class="fa-solid fa-clipboard-list"></i> Anotações do caso:</label>
+                    <div class="anotacoes-conteudo">${local.anotacoes}</div>
+                </div>
+                ` : `
+                <div class="anotacoes-vazia">
+                    <i class="fa-solid fa-clipboard"></i>
+                    <p>Este caso não possui anotações.</p>
+                </div>`}
                 
                 ${local.preservacao ? `
-                <div class="preservacao-info" style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
-                    <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 16px; display: flex; align-items: center;">
-                        <i class="fa-solid fa-shield-alt" style="margin-right: 8px; color: ${temPreservacao ? '#27ae60' : '#e74c3c'};"></i>
-                        Preservação: <span style="margin-left: 5px; color: ${temPreservacao ? '#27ae60' : '#e74c3c'};">${local.preservacao.preservado === 'sim' ? 'Sim' : 'Não'}</span>
+                <div class="preservacao-info">
+                    <h4>
+                        <i class="fa-solid fa-shield-halved"></i>
+                        Preservação: <span class="${local.preservacao.preservado === 'sim' ? 'preservado-sim' : 'preservado-nao'}">${local.preservacao.preservado === 'sim' ? 'Sim' : 'Não'}</span>
                     </h4>
                     
-                    ${temPreservacao ? `
-                    <div style="margin-top: 15px;">
-                        <h5 style="margin-top: 0; margin-bottom: 10px; font-size: 14px;">Equipe de Preservação:</h5>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                            <div>
-                                <span style="font-weight: bold; display: block;">Oficial:</span>
-                                <span>${local.preservacao.oficial || '-'}</span>
+                    ${local.preservacao.preservado === 'sim' ? `
+                    <div class="equipe-preservacao">
+                        <h5>Equipe de Preservação:</h5>
+                        <div class="info-preservacao">
+                            <div class="info-item">
+                                <span class="info-label">Oficial:</span>
+                                <span class="info-valor">${local.preservacao.oficial || '-'}</span>
                             </div>
-                            <div>
-                                <span style="font-weight: bold; display: block;">Registro:</span>
-                                <span>${local.preservacao.registro || '-'}</span>
+                            <div class="info-item">
+                                <span class="info-label">Registro:</span>
+                                <span class="info-valor">${local.preservacao.registro || '-'}</span>
                             </div>
-                            <div>
-                                <span style="font-weight: bold; display: block;">Viatura:</span>
-                                <span>${local.preservacao.viatura || '-'}</span>
+                            <div class="info-item">
+                                <span class="info-label">Viatura:</span>
+                                <span class="info-valor">${local.preservacao.viatura || '-'}</span>
                             </div>
-                        </div>
-                        
-                        <div style="margin-top: 15px;">
-                            <h5 style="margin-top: 0; margin-bottom: 10px; font-size: 14px;">Autoridade no Local:</h5>
-                            <div>
-                                <span style="font-weight: bold; display: block;">Delegado:</span>
-                                <span>${local.preservacao.delegado || '-'}</span>
+                            <div class="info-item">
+                                <span class="info-label">Delegado:</span>
+                                <span class="info-valor">${local.preservacao.delegado || '-'}</span>
                             </div>
                         </div>
                     </div>

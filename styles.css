@@ -682,18 +682,46 @@ button i {
     transform: scale(1.1);
 }
 
+/* Estilo para a caixa de anotações */
 .anotacoes-conteudo {
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
     white-space: pre-wrap;
-    font-family: inherit;
-    font-size: 15px;
-    line-height: 1.5;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
     border: 1px solid #e9ecef;
-    max-height: 400px;
+    font-family: inherit;
+    line-height: 1.5;
+    max-height: 300px;
     overflow-y: auto;
+    position: relative;
+}
+
+/* Detalhes do caso */
+.caso-detalhes {
+    background-color: #edf7ff;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+    margin-bottom: 20px;
+}
+
+.caso-detalhes p {
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+.caso-detalhes p strong {
+    display: inline-block;
+    min-width: 180px;
+    color: #2c3e50;
+}
+
+/* Estiliza os marcadores de tempo nas anotações */
+.anotacoes-conteudo::first-line {
+    color: #3498db;
+    font-weight: bold;
+    font-size: 1.05em;
+    line-height: 2;
 }
 
 .modal-buttons {
@@ -775,4 +803,91 @@ button i {
 
 .btn-ver-anotacoes i {
     font-size: 16px;
+}
+
+/* Estilo para anotações vazias */
+.anotacoes-vazia {
+    text-align: center; 
+    padding: 30px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.anotacoes-vazia i {
+    font-size: 32px; 
+    color: #3498db; 
+    margin-bottom: 15px; 
+    display: block;
+}
+
+.anotacoes-vazia p {
+    font-size: 16px; 
+    color: #666;
+}
+
+/* Informações de preservação */
+.preservacao-info {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.preservacao-info h4 {
+    display: flex;
+    align-items: center;
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.preservacao-info h4 i {
+    margin-right: 8px;
+    color: #27ae60;
+}
+
+.preservacao-info .preservado-sim {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.preservacao-info .preservado-nao {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.equipe-preservacao {
+    margin-top: 15px;
+}
+
+.equipe-preservacao h5 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #2c3e50;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+.info-preservacao {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    font-weight: bold;
+    color: #555;
+    margin-bottom: 3px;
+}
+
+.info-valor {
+    color: #333;
 } 
