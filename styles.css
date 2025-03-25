@@ -61,6 +61,14 @@ h2 {
     background-color: #c0392b;
 }
 
+.btn-arquivar-global {
+    background-color: #3498db;
+}
+
+.btn-arquivar-global:hover {
+    background-color: #2980b9;
+}
+
 .form-header {
     display: flex;
     justify-content: space-between;
@@ -210,13 +218,47 @@ table th {
 }
 
 .status-pendente {
+    color: #f39c12;
+}
+
+.status-com-prazo {
     color: #e74c3c;
-    font-weight: bold;
 }
 
 .status-concluido {
     color: #27ae60;
-    font-weight: bold;
+}
+
+.status-arquivado {
+    color: #3498db;
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-pendente .status-indicator {
+    background-color: #f39c12;
+}
+
+.status-com-prazo .status-indicator {
+    background-color: #e74c3c;
+}
+
+.status-concluido .status-indicator {
+    background-color: #27ae60;
+}
+
+.status-arquivado .status-indicator {
+    background-color: #3498db;
+}
+
+.status-text {
+    display: none;
 }
 
 /* Estilos para o modal */

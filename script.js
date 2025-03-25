@@ -14,6 +14,7 @@ const formContainer = document.getElementById('form-container');
 const modalOverlay = document.getElementById('modal-overlay');
 const btnEditarPorRep = document.getElementById('btn-editar-por-rep');
 const btnExcluirPorRep = document.getElementById('btn-excluir-por-rep');
+const btnArquivarPorRep = document.getElementById('btn-arquivar-por-rep');
 const inputAnexos = document.getElementById('anexos');
 const listaArquivosSelecionados = document.getElementById('lista-arquivos-selecionados');
 const inputImagemParaIA = document.getElementById('imagem-para-ia');
@@ -334,7 +335,13 @@ function atualizarListaLocais() {
             </td>
             <td>${local.rep}</td>
             <td>${local.endereco}</td>
-            <td class="status-${local.status}">${local.status === 'pendente' ? 'Pendente' : 'Concluído'}</td>
+            <td class="status-${local.status}">
+                <span class="status-indicator"></span>
+                <span class="status-text">${local.status === 'pendente' ? 'Pendente' : 
+                    local.status === 'com-prazo' ? 'Com prazo' : 
+                    local.status === 'concluido' ? 'Concluído' : 
+                    'Arquivado'}</span>
+            </td>
             <td>
                 <div class="acoes-container">
                     <button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
@@ -798,6 +805,7 @@ btnMostrarForm.addEventListener('click', abrirModal);
 btnFecharForm.addEventListener('click', fecharModal);
 btnEditarPorRep.addEventListener('click', editarPorRep);
 btnExcluirPorRep.addEventListener('click', excluirPorRep);
+btnArquivarPorRep.addEventListener('click', arquivarPorRep);
 inputAnexos.addEventListener('change', processarArquivosSelecionados);
 btnCarregarImagemIA.addEventListener('click', carregarImagensParaIA);
 inputImagemParaIA.addEventListener('change', processarImagensSelecionadas);
@@ -1111,7 +1119,13 @@ function atualizarListaLocaisAgrupados() {
             </td>
             <td>${local.rep}</td>
             <td>${local.endereco}</td>
-            <td class="status-${local.status}">${local.status === 'pendente' ? 'Pendente' : 'Concluído'}</td>
+            <td class="status-${local.status}">
+                <span class="status-indicator"></span>
+                <span class="status-text">${local.status === 'pendente' ? 'Pendente' : 
+                    local.status === 'com-prazo' ? 'Com prazo' : 
+                    local.status === 'concluido' ? 'Concluído' : 
+                    'Arquivado'}</span>
+            </td>
             <td>
                 <div class="acoes-container">
                     <button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
@@ -1180,4 +1194,20 @@ window.addEventListener('DOMContentLoaded', () => {
     // Garantir que o filtro comece com "pendente" selecionado
     filtroStatus.value = 'pendente';
     atualizarListaLocais();
-}); 
+});
+
+function arquivarPorRep() {
+    const rep = prompt('Digite o número de REP do local que deseja arquivar:');
+    if (!rep) return;
+    
+    const local = locais.find(l => l.rep === rep);
+    if (!local) {
+        alert('Não foi encontrado nenhum local com este número de REP!');
+        return;
+    }
+    
+    // Atualizar o status para arquivado
+    local.status = 'arquivado';
+    salvarNoLocalStorage();
+    atualizarListaLocais();
+} 
