@@ -696,14 +696,14 @@ async function preencherFormularioComIA() {
         const messages = [
             {
                 role: "system", 
-                content: "Você é um assistente especializado em extrair informações de imagens de casos forenses. Em documentos oficiais, o número de REP é um identificador único que geralmente aparece carimbado no documento junto à palavra 'REP'. Extraia as seguintes informações se disponíveis: número de REP (apenas se estiver do lado da palavra 'REP'), endereço completo, nome da vítima, telefone da vítima, tipo de exame (Constatação de furto, Constatação de danos, etc) e um resumo do caso (descrição do que foi furtado ou danificado). Forneça apenas essas informações em formato JSON."
+                content: "Você é um assistente especializado em extrair informações de imagens de casos forenses. Em documentos oficiais, o número de REP é um identificador único que geralmente aparece carimbado no documento junto à palavra 'REP'. IMPORTANTE: A cidade do endereço do local é sempre a mesma cidade da delegacia que emitiu o Boletim de Ocorrência (BO) e enviou a requisição. Extraia as seguintes informações se disponíveis: número de REP (apenas se estiver do lado da palavra 'REP'), endereço completo, nome da vítima, telefone da vítima, tipo de exame (Constatação de furto, Constatação de danos, etc) e um resumo do caso (descrição do que foi furtado ou danificado). Forneça apenas essas informações em formato JSON."
             },
             {
                 role: "user",
                 content: [
                     {
                         type: "text",
-                        text: "Analise estas imagens e extraia as seguintes informações: número de REP, endereço completo, nome da vítima, telefone da vítima, tipo de exame e um resumo do caso. IMPORTANTE: O número de REP deve ser extraído apenas quando estiver próximo à palavra 'REP' ou em um carimbo que contenha 'REP'. Se não houver menção explícita à palavra 'REP', deixe o campo de número REP vazio. Retorne APENAS no formato JSON como este exemplo: {\"rep\":\"12345\",\"endereco\":\"Rua Exemplo, 123\",\"nomeVitima\":\"Nome da Pessoa\",\"telefoneVitima\":\"(11) 99999-9999\",\"tipoExame\":\"Tipo do exame\",\"resumoCaso\":\"Breve resumo do caso\"}. Se algum campo não for encontrado, deixe-o como string vazia."
+                        text: "Analise estas imagens e extraia as seguintes informações: número de REP, endereço completo, nome da vítima, telefone da vítima, tipo de exame e um resumo do caso. IMPORTANTE: O número de REP deve ser extraído apenas quando estiver próximo à palavra 'REP' ou em um carimbo que contenha 'REP'. Se não houver menção explícita à palavra 'REP', deixe o campo de número REP vazio. A cidade do endereço é sempre a mesma cidade da delegacia que emitiu o BO. Retorne APENAS no formato JSON como este exemplo: {\"rep\":\"12345\",\"endereco\":\"Rua Exemplo, 123\",\"nomeVitima\":\"Nome da Pessoa\",\"telefoneVitima\":\"(11) 99999-9999\",\"tipoExame\":\"Tipo do exame\",\"resumoCaso\":\"Breve resumo do caso\"}. Se algum campo não for encontrado, deixe-o como string vazia."
                     },
                     ...imageContents
                 ]
@@ -942,7 +942,7 @@ async function ordenarPorBairroIA() {
             },
             {
                 role: "user",
-                content: `Analise os seguintes endereços e extraia o bairro de cada um. Se não conseguir identificar o bairro exato, faça sua melhor estimativa baseada nas informações disponíveis. Depois, agrupe os endereços por bairro. Retorne APENAS no formato JSON como este exemplo: { "grupos": [ { "bairro": "Nome do Bairro", "locais": [ids dos locais] }, ... ] }. Não inclua nenhum texto adicional. Aqui estão os endereços: ${JSON.stringify(enderecos)}`
+                content: `Analise os seguintes endereços e extraia a cidade e o bairro de cada um. Se não conseguir identificar exatamente, faça sua melhor estimativa baseada nas informações disponíveis. Agrupe primeiro por cidade e depois por bairro. Retorne APENAS no formato JSON como este exemplo: { "cidades": [ { "nome": "Nome da Cidade", "bairros": [ { "nome": "Nome do Bairro", "locais": [ids dos locais] } ] } ] }. Não inclua nenhum texto adicional. Aqui estão os endereços: ${JSON.stringify(enderecos)}`
             }
         ];
         
@@ -984,26 +984,41 @@ async function ordenarPorBairroIA() {
             }
         }
 
-        // Reordenar os locais com base nos grupos de bairros
-        if (resultados && resultados.grupos && Array.isArray(resultados.grupos)) {
+        // Reordenar os locais com base nos grupos de cidades e bairros
+        if (resultados && resultados.cidades && Array.isArray(resultados.cidades)) {
             // Criar cópia dos locais atuais
             const locaisOrdenados = [];
             
-            // Para cada grupo de bairro
-            resultados.grupos.forEach(grupo => {
-                const locaisDoBairro = grupo.locais
-                    .map(id => locaisFiltrados.find(l => l.id === id))
-                    .filter(local => local !== undefined);
+            // Para cada cidade
+            resultados.cidades.forEach(cidade => {
+                let temLocaisNaCidade = false;
+                const locaisDaCidade = [];
 
-                if (locaisDoBairro.length > 0) {
-                    // Adicionar cabeçalho de bairro como elemento especial
+                // Verificar cada bairro da cidade
+                cidade.bairros.forEach(bairro => {
+                    const locaisDoBairro = bairro.locais
+                        .map(id => locaisFiltrados.find(l => l.id === id))
+                        .filter(local => local !== undefined);
+
+                    if (locaisDoBairro.length > 0) {
+                        temLocaisNaCidade = true;
+                        // Adicionar cabeçalho de bairro e seus locais
+                        locaisDaCidade.push({
+                            isBairroHeader: true,
+                            cidade: cidade.nome,
+                            bairro: bairro.nome
+                        });
+                        locaisDaCidade.push(...locaisDoBairro);
+                    }
+                });
+
+                // Se houver locais nesta cidade, adicionar o cabeçalho da cidade e seus locais
+                if (temLocaisNaCidade) {
                     locaisOrdenados.push({
-                        isBairroHeader: true,
-                        bairro: grupo.bairro
+                        isCidadeHeader: true,
+                        cidade: cidade.nome
                     });
-                    
-                    // Adicionar os locais desse bairro
-                    locaisOrdenados.push(...locaisDoBairro);
+                    locaisOrdenados.push(...locaisDaCidade);
                 }
             });
             
@@ -1017,11 +1032,11 @@ async function ordenarPorBairroIA() {
             // Restaurar o array original, mas manter a visualização
             locais = locaisOriginal;
         } else {
-            throw new Error('Formato de resposta inválido ou sem grupos de bairros');
+            throw new Error('Formato de resposta inválido ou sem grupos de cidades/bairros');
         }
     } catch (error) {
-        console.error('Erro ao ordenar por bairro:', error);
-        alert(`Erro ao ordenar por bairro: ${error.message}`);
+        console.error('Erro ao ordenar por cidade/bairro:', error);
+        alert(`Erro ao ordenar por cidade/bairro: ${error.message}`);
         // Restaurar visualização normal
         atualizarListaLocais();
     } finally {
@@ -1031,19 +1046,19 @@ async function ordenarPorBairroIA() {
     }
 }
 
-// Função para atualizar a lista de locais agrupados por bairro
+// Função para atualizar a lista de locais agrupados por cidade e bairro
 function atualizarListaLocaisAgrupados() {
     listaLocais.innerHTML = '';
     
     const filtro = filtroStatus.value;
     
-    // Filtrar os headers de bairro e locais pelo status
+    // Filtrar os headers e locais pelo status
     const locaisFiltrados = locais.filter(local => {
-        if (local.isBairroHeader) return true; // Sempre mostrar headers de bairro
+        if (local.isCidadeHeader || local.isBairroHeader) return true; // Sempre mostrar headers
         return filtro === 'todos' ? true : local.status === filtro;
     });
     
-    if (locaisFiltrados.length === 0 || locaisFiltrados.every(local => local.isBairroHeader)) {
+    if (locaisFiltrados.length === 0 || locaisFiltrados.every(local => local.isCidadeHeader || local.isBairroHeader)) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td colspan="5" style="text-align: center;">Nenhum local encontrado</td>
@@ -1053,6 +1068,19 @@ function atualizarListaLocaisAgrupados() {
     }
     
     locaisFiltrados.forEach(local => {
+        if (local.isCidadeHeader) {
+            // Renderizar cabeçalho de cidade
+            const trCidade = document.createElement('tr');
+            trCidade.className = 'cidade-header';
+            trCidade.innerHTML = `
+                <td colspan="5" class="cidade-nome">
+                    <i class="fa-solid fa-city"></i> ${local.cidade}
+                </td>
+            `;
+            listaLocais.appendChild(trCidade);
+            return;
+        }
+        
         if (local.isBairroHeader) {
             // Renderizar cabeçalho de bairro
             const trBairro = document.createElement('tr');

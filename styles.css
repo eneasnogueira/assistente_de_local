@@ -513,14 +513,30 @@ button i {
     background-color: #7d3c98;
 }
 
+.cidade-header {
+    background-color: #e8f4f8;
+}
+
+.cidade-nome {
+    padding: 12px 12px;
+    font-weight: bold;
+    color: #2c3e50;
+    font-size: 1.2rem;
+}
+
+.cidade-nome i {
+    margin-right: 8px;
+    color: #3498db;
+}
+
 .bairro-header {
     background-color: #f0e6f6;
 }
 
 .bairro-nome {
-    padding: 8px 12px;
+    padding: 8px 12px 8px 24px;
     font-weight: bold;
-    color: #7d3c98;
+    color: #8e44ad;
     font-size: 1.1rem;
 }
 
