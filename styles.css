@@ -124,10 +124,29 @@ h2 {
     margin-bottom: 15px;
 }
 
-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.form-group label:hover {
+    background-color: #f5f5f5;
+}
+
+.form-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.form-group input[type="checkbox"]:checked {
+    accent-color: #e74c3c;
 }
 
 input, select, textarea {
@@ -221,11 +240,7 @@ table th {
     color: #f39c12;
 }
 
-.status-com-prazo {
-    color: #e74c3c;
-}
-
-.status-concluido {
+.status-atendido {
     color: #27ae60;
 }
 
@@ -235,29 +250,67 @@ table th {
 
 .status-indicator {
     display: inline-block;
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     margin-right: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    position: relative;
+}
+
+.status-indicator:hover {
+    transform: scale(1.2);
+}
+
+.status-pendente .status-indicator::after {
+    content: '\f35a';  /* Código do ícone fa-circle-right */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    font-size: 14px;
+    right: -10px;
+    bottom: -6px;
+    color: #d35400;
+    background-color: white;
+    border-radius: 50%;
+    padding: 2px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transform: rotate(-45deg);  /* Rotacionar a seta para apontar para cima-direita */
 }
 
 .status-pendente .status-indicator {
     background-color: #f39c12;
 }
 
-.status-com-prazo .status-indicator {
+.status-pendente.com-prazo .status-indicator {
     background-color: #e74c3c;
 }
 
-.status-concluido .status-indicator {
+.status-atendido .status-indicator {
     background-color: #27ae60;
+    cursor: default;
+}
+
+.status-atendido .status-indicator:hover {
+    transform: none;
 }
 
 .status-arquivado .status-indicator {
     background-color: #3498db;
+    cursor: default;
+}
+
+.status-arquivado .status-indicator:hover {
+    transform: none;
 }
 
 .status-text {
+    display: none;
+}
+
+/* Novo estilo para o indicador de prazo */
+.prazo-indicator {
     display: none;
 }
 

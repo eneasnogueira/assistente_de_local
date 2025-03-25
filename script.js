@@ -39,7 +39,7 @@ function adicionarLocal(e) {
     
     const rep = document.getElementById('rep').value;
     const endereco = document.getElementById('endereco').value;
-    const status = document.getElementById('status').value;
+    const comPrazo = document.getElementById('comPrazo').checked;
     const nomeVitima = document.getElementById('nomeVitima').value;
     const telefoneVitima = document.getElementById('telefoneVitima').value;
     const tipoExame = document.getElementById('tipoExame').value;
@@ -65,7 +65,8 @@ function adicionarLocal(e) {
         id: modoEdicao ? localOriginal.id : Date.now(),
         rep,
         endereco,
-        status,
+        status: modoEdicao ? localOriginal.status : 'pendente',
+        comPrazo,
         nomeVitima,
         telefoneVitima,
         tipoExame,
@@ -176,7 +177,7 @@ function editarLocal(id) {
     // Preencher o formulário com os dados do local
     document.getElementById('rep').value = local.rep;
     document.getElementById('endereco').value = local.endereco;
-    document.getElementById('status').value = local.status;
+    document.getElementById('comPrazo').checked = local.comPrazo || false;
     document.getElementById('nomeVitima').value = local.nomeVitima || '';
     document.getElementById('telefoneVitima').value = local.telefoneVitima || '';
     document.getElementById('tipoExame').value = local.tipoExame || '';
@@ -335,11 +336,10 @@ function atualizarListaLocais() {
             </td>
             <td>${local.rep}</td>
             <td>${local.endereco}</td>
-            <td class="status-${local.status}">
-                <span class="status-indicator"></span>
+            <td class="status-${local.status} ${local.comPrazo ? 'com-prazo' : ''}">
+                <span class="status-indicator" onclick="mudarStatusLocal(${local.id})"></span>
                 <span class="status-text">${local.status === 'pendente' ? 'Pendente' : 
-                    local.status === 'com-prazo' ? 'Com prazo' : 
-                    local.status === 'concluido' ? 'Concluído' : 
+                    local.status === 'atendido' ? 'Atendido' : 
                     'Arquivado'}</span>
             </td>
             <td>
@@ -347,11 +347,6 @@ function atualizarListaLocais() {
                     <button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
                         <i class="fa-solid fa-map-location-dot"></i> Maps
                     </button>
-                    ${local.status === 'pendente' ? 
-                        `<button class="btn-concluir" onclick="marcarComoConcluido(${locais.indexOf(local)})">
-                            <i class="fa-solid fa-check"></i>
-                        </button>` : ''
-                    }
                 </div>
             </td>
         `;
@@ -827,16 +822,17 @@ atualizarListaLocais();
 window.abrirNoMaps = abrirNoMaps;
 window.toggleDetalhes = toggleDetalhes;
 window.abrirAnexo = abrirAnexo;
-window.marcarComoConcluido = marcarComoConcluido;
+window.marcarComoAtendido = marcarComoAtendido;
+window.mudarStatusLocal = mudarStatusLocal;
 
-// Função para marcar local como concluído
-function marcarComoConcluido(index) {
+// Função para marcar local como atendido
+function marcarComoAtendido(index) {
     const local = locais[index];
     
     // Confirmar a ação
-    if (confirm(`Deseja marcar o local REP ${local.rep} como concluído?`)) {
+    if (confirm(`Deseja marcar o local REP ${local.rep} como atendido?`)) {
         // Atualizar o status
-        local.status = 'concluido';
+        local.status = 'atendido';
         
         // Salvar no localStorage
         salvarNoLocalStorage();
@@ -1119,11 +1115,10 @@ function atualizarListaLocaisAgrupados() {
             </td>
             <td>${local.rep}</td>
             <td>${local.endereco}</td>
-            <td class="status-${local.status}">
-                <span class="status-indicator"></span>
+            <td class="status-${local.status} ${local.comPrazo ? 'com-prazo' : ''}">
+                <span class="status-indicator" onclick="mudarStatusLocal(${local.id})"></span>
                 <span class="status-text">${local.status === 'pendente' ? 'Pendente' : 
-                    local.status === 'com-prazo' ? 'Com prazo' : 
-                    local.status === 'concluido' ? 'Concluído' : 
+                    local.status === 'atendido' ? 'Atendido' : 
                     'Arquivado'}</span>
             </td>
             <td>
@@ -1131,11 +1126,6 @@ function atualizarListaLocaisAgrupados() {
                     <button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
                         <i class="fa-solid fa-map-location-dot"></i> Maps
                     </button>
-                    ${local.status === 'pendente' ? 
-                        `<button class="btn-concluir" onclick="marcarComoConcluido(${locais.indexOf(local)})">
-                            <i class="fa-solid fa-check"></i>
-                        </button>` : ''
-                    }
                 </div>
             </td>
         `;
@@ -1210,4 +1200,46 @@ function arquivarPorRep() {
     local.status = 'arquivado';
     salvarNoLocalStorage();
     atualizarListaLocais();
+}
+
+function mudarStatusLocal(localIdOrObj) {
+    let localId;
+    
+    // Determinar o ID do local com base no tipo do parâmetro
+    if (typeof localIdOrObj === 'string') {
+        try {
+            // Tentar parsear como JSON
+            const localObj = JSON.parse(localIdOrObj);
+            localId = localObj.id;
+        } catch (e) {
+            // Se não for JSON, assume que é o ID diretamente
+            localId = localIdOrObj;
+        }
+    } else if (typeof localIdOrObj === 'object') {
+        localId = localIdOrObj.id;
+    } else {
+        localId = localIdOrObj;
+    }
+    
+    // Encontrar o local pelo ID
+    const localIndex = locais.findIndex(l => l.id === localId);
+    if (localIndex === -1) return;
+    
+    const local = locais[localIndex];
+    
+    if (local.status === 'arquivado') return; // Não permite mudar status de arquivado
+    
+    if (local.status === 'pendente') {
+        if (confirm(`Deseja marcar o local REP ${local.rep} como atendido?`)) {
+            local.status = 'atendido';
+            salvarNoLocalStorage();
+            
+            // Decidir qual função de atualização chamar com base na visualização atual
+            if (document.querySelector('.cidade-header') || document.querySelector('.bairro-header')) {
+                atualizarListaLocaisAgrupados();
+            } else {
+                atualizarListaLocais();
+            }
+        }
+    }
 } 
