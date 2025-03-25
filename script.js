@@ -1031,6 +1031,9 @@ async function ordenarPorBairroIA() {
             // Criar cópia dos locais atuais
             const locaisOrdenados = [];
             
+            // Criar um conjunto de IDs já processados
+            const idsProcessados = new Set();
+            
             // Para cada cidade
             resultados.cidades.forEach(cidade => {
                 let temLocaisNaCidade = false;
@@ -1051,6 +1054,9 @@ async function ordenarPorBairroIA() {
                             bairro: bairro.nome
                         });
                         locaisDaCidade.push(...locaisDoBairro);
+                        
+                        // Adicionar IDs processados
+                        locaisDoBairro.forEach(local => idsProcessados.add(local.id));
                     }
                 });
 
@@ -1063,6 +1069,22 @@ async function ordenarPorBairroIA() {
                     locaisOrdenados.push(...locaisDaCidade);
                 }
             });
+            
+            // Encontrar locais não processados (sem cidade/bairro identificado)
+            const locaisNaoProcessados = locaisFiltrados.filter(local => 
+                !local.isCidadeHeader && 
+                !local.isBairroHeader && 
+                !idsProcessados.has(local.id)
+            );
+            
+            // Se houver locais não processados, adicionar uma seção especial para eles
+            if (locaisNaoProcessados.length > 0) {
+                locaisOrdenados.push({
+                    isCidadeHeader: true,
+                    cidade: "Cidade ou bairro não encontrados"
+                });
+                locaisOrdenados.push(...locaisNaoProcessados);
+            }
             
             // Atualize a lista de locais temporariamente (sem salvar)
             const locaisOriginal = [...locais];
