@@ -470,7 +470,7 @@ function salvarParaArquivo() {
     
     const a = document.createElement('a');
     a.href = url;
-    a.download = `REPs em ${dataFormatada}.json`;
+    a.download = `Casos em ${dataFormatada}.json`;
     document.body.appendChild(a);
     a.click();
     
@@ -759,6 +759,9 @@ async function preencherFormularioComIA() {
         // Atualizar a lista visual de anexos (para garantir que todos os anexos estejam visíveis)
         atualizarListaArquivosSelecionados();
         
+        // Mostrar mensagem de sucesso
+        alert(`Formulário preenchido com sucesso usando IA!\n\n${imagensParaIA.length} arquivo(s) foram processados e anexados ao caso.`);
+        
     } catch (error) {
         console.error('Erro ao processar imagens com IA:', error);
         alert(`Erro ao processar imagens: ${error.message}`);
@@ -800,6 +803,7 @@ btnCarregarImagemIA.addEventListener('click', carregarImagensParaIA);
 inputImagemParaIA.addEventListener('change', processarImagensSelecionadas);
 btnPreencherIA.addEventListener('click', preencherFormularioComIA);
 btnConfigAPI.addEventListener('click', configurarAPI);
+document.getElementById('btn-ordenar-ia').addEventListener('click', ordenarPorBairroIA);
 
 // Fechar modal quando clicar fora do conteúdo
 modalOverlay.addEventListener('click', function(e) {
@@ -890,4 +894,262 @@ async function converterPdfParaImagens(pdfFile) {
         console.error("Erro ao converter PDF:", error);
         throw new Error(`Não foi possível converter o PDF: ${error.message}`);
     }
-} 
+}
+
+// Função para ordenar locais por bairro usando IA
+async function ordenarPorBairroIA() {
+    // Obter os locais filtrados pelo status atual
+    const filtro = filtroStatus.value;
+    const locaisFiltrados = filtro === 'todos' 
+        ? locais 
+        : locais.filter(local => local.status === filtro);
+
+    if (locaisFiltrados.length === 0) {
+        alert('Não há locais para ordenar!');
+        return;
+    }
+
+    // Mostrar indicador de carregamento
+    const btnOrdenarIA = document.getElementById('btn-ordenar-ia');
+    const btnTextoOriginal = btnOrdenarIA.innerHTML;
+    btnOrdenarIA.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando...';
+    btnOrdenarIA.disabled = true;
+
+    try {
+        // Verificar a chave da API
+        const apiKey = localStorage.getItem('openai_api_key');
+        
+        if (!apiKey) {
+            const key = prompt('Por favor, insira sua chave de API da OpenAI:');
+            if (!key) {
+                throw new Error('Chave de API não fornecida');
+            }
+            localStorage.setItem('openai_api_key', key);
+        }
+
+        // Preparar os dados dos endereços para enviar para a API
+        const enderecos = locaisFiltrados.map(local => ({
+            id: local.id,
+            rep: local.rep,
+            endereco: local.endereco
+        }));
+
+        // Construir mensagens para o ChatGPT
+        const messages = [
+            {
+                role: "system", 
+                content: "Você é um assistente especializado em extrair e categorizar informações geográficas de endereços."
+            },
+            {
+                role: "user",
+                content: `Analise os seguintes endereços e extraia o bairro de cada um. Se não conseguir identificar o bairro exato, faça sua melhor estimativa baseada nas informações disponíveis. Depois, agrupe os endereços por bairro. Retorne APENAS no formato JSON como este exemplo: { "grupos": [ { "bairro": "Nome do Bairro", "locais": [ids dos locais] }, ... ] }. Não inclua nenhum texto adicional. Aqui estão os endereços: ${JSON.stringify(enderecos)}`
+            }
+        ];
+        
+        // Enviar para a API do ChatGPT
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: "gpt-4o",
+                messages: messages,
+                max_tokens: 1500
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Erro na API: ${response.status} - ${JSON.stringify(errorData)}`);
+        }
+        
+        const data = await response.json();
+        
+        // Extrair a resposta JSON
+        const assistantMessage = data.choices[0].message.content;
+        let resultados;
+        
+        try {
+            // Tentar extrair JSON diretamente
+            resultados = JSON.parse(assistantMessage);
+        } catch (e) {
+            // Se falhar, tentar encontrar um objeto JSON no texto
+            const jsonMatch = assistantMessage.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                resultados = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('Não foi possível extrair dados JSON da resposta');
+            }
+        }
+
+        // Reordenar os locais com base nos grupos de bairros
+        if (resultados && resultados.grupos && Array.isArray(resultados.grupos)) {
+            // Criar cópia dos locais atuais
+            const locaisOrdenados = [];
+            
+            // Para cada grupo de bairro
+            resultados.grupos.forEach(grupo => {
+                const locaisDoBairro = grupo.locais
+                    .map(id => locaisFiltrados.find(l => l.id === id))
+                    .filter(local => local !== undefined);
+
+                if (locaisDoBairro.length > 0) {
+                    // Adicionar cabeçalho de bairro como elemento especial
+                    locaisOrdenados.push({
+                        isBairroHeader: true,
+                        bairro: grupo.bairro
+                    });
+                    
+                    // Adicionar os locais desse bairro
+                    locaisOrdenados.push(...locaisDoBairro);
+                }
+            });
+            
+            // Atualize a lista de locais temporariamente (sem salvar)
+            const locaisOriginal = [...locais];
+            locais = locaisOrdenados;
+            
+            // Atualizar a visualização
+            atualizarListaLocaisAgrupados();
+            
+            // Restaurar o array original, mas manter a visualização
+            locais = locaisOriginal;
+        } else {
+            throw new Error('Formato de resposta inválido ou sem grupos de bairros');
+        }
+    } catch (error) {
+        console.error('Erro ao ordenar por bairro:', error);
+        alert(`Erro ao ordenar por bairro: ${error.message}`);
+        // Restaurar visualização normal
+        atualizarListaLocais();
+    } finally {
+        // Restaurar o estado do botão
+        btnOrdenarIA.innerHTML = btnTextoOriginal;
+        btnOrdenarIA.disabled = false;
+    }
+}
+
+// Função para atualizar a lista de locais agrupados por bairro
+function atualizarListaLocaisAgrupados() {
+    listaLocais.innerHTML = '';
+    
+    const filtro = filtroStatus.value;
+    
+    // Filtrar os headers de bairro e locais pelo status
+    const locaisFiltrados = locais.filter(local => {
+        if (local.isBairroHeader) return true; // Sempre mostrar headers de bairro
+        return filtro === 'todos' ? true : local.status === filtro;
+    });
+    
+    if (locaisFiltrados.length === 0 || locaisFiltrados.every(local => local.isBairroHeader)) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td colspan="5" style="text-align: center;">Nenhum local encontrado</td>
+        `;
+        listaLocais.appendChild(tr);
+        return;
+    }
+    
+    locaisFiltrados.forEach(local => {
+        if (local.isBairroHeader) {
+            // Renderizar cabeçalho de bairro
+            const trBairro = document.createElement('tr');
+            trBairro.className = 'bairro-header';
+            trBairro.innerHTML = `
+                <td colspan="5" class="bairro-nome">
+                    <i class="fa-solid fa-map-marker-alt"></i> ${local.bairro}
+                </td>
+            `;
+            listaLocais.appendChild(trBairro);
+            return;
+        }
+        
+        // Renderizar local normalmente
+        const temDetalhes = local.nomeVitima || local.telefoneVitima || local.tipoExame || local.resumoCaso || (local.anexos && local.anexos.length > 0);
+        
+        // Linha principal
+        const tr = document.createElement('tr');
+        tr.dataset.id = local.id;
+        
+        tr.innerHTML = `
+            <td class="expandir-col">
+                <button type="button" class="btn-expandir ${!temDetalhes ? 'btn-desativado' : ''}" 
+                    onclick="${temDetalhes ? `toggleDetalhes(${local.id})` : ''}"
+                    ${!temDetalhes ? 'disabled' : ''}>
+                    <i class="fa-solid ${temDetalhes ? 'fa-plus' : 'fa-circle-dot fa-xs'} expandir-icon"></i>
+                </button>
+            </td>
+            <td>${local.rep}</td>
+            <td>${local.endereco}</td>
+            <td class="status-${local.status}">${local.status === 'pendente' ? 'Pendente' : 'Concluído'}</td>
+            <td>
+                <div class="acoes-container">
+                    <button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
+                        <i class="fa-solid fa-map-location-dot"></i> Maps
+                    </button>
+                    ${local.status === 'pendente' ? 
+                        `<button class="btn-concluir" onclick="marcarComoConcluido(${locais.indexOf(local)})">
+                            <i class="fa-solid fa-check"></i>
+                        </button>` : ''
+                    }
+                </div>
+            </td>
+        `;
+        
+        listaLocais.appendChild(tr);
+        
+        // Linha de detalhes (oculta inicialmente)
+        if (temDetalhes) {
+            const trDetalhes = document.createElement('tr');
+            trDetalhes.className = 'linha-detalhes';
+            trDetalhes.id = `detalhes-${local.id}`;
+            trDetalhes.style.display = 'none';
+            
+            let detalhesHTML = '<td colspan="5" class="detalhes-container">';
+            
+            if (local.nomeVitima) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-user"></i> Nome da vítima:</span> ${local.nomeVitima}</div>`;
+            if (local.telefoneVitima) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-phone"></i> Telefone da vítima:</span> ${local.telefoneVitima}</div>`;
+            if (local.tipoExame) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-stethoscope"></i> Tipo de exame:</span> ${local.tipoExame}</div>`;
+            if (local.resumoCaso) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-file-lines"></i> Resumo do caso:</span> <div class="detalhe-resumo">${local.resumoCaso}</div></div>`;
+            
+            // Adicionar anexos se existirem
+            if (local.anexos && local.anexos.length > 0) {
+                detalhesHTML += `<div class="detalhe-item">
+                    <span class="detalhe-label"><i class="fa-solid fa-paperclip"></i> Anexos:</span>
+                    <div class="lista-anexos">`;
+                
+                local.anexos.forEach((anexo, index) => {
+                    detalhesHTML += `
+                        <div class="anexo-item">
+                            <i class="fa-solid fa-file"></i>
+                            <a href="#" onclick="abrirAnexo('${anexo.conteudo}', '${anexo.tipo}', '${anexo.nome.replace(/'/g, "\\'")}'); return false;">
+                                ${anexo.nome}
+                            </a>
+                            <span class="tamanho-arquivo">(${formatarTamanhoArquivo(anexo.tamanho)})</span>
+                        </div>
+                    `;
+                });
+                
+                detalhesHTML += `</div></div>`;
+            }
+            
+            detalhesHTML += '</td>';
+            
+            trDetalhes.innerHTML = detalhesHTML;
+            listaLocais.appendChild(trDetalhes);
+        }
+    });
+}
+
+// Carregar locais do localStorage ao iniciar
+window.addEventListener('DOMContentLoaded', () => {
+    const locaisArmazenados = localStorage.getItem('locais');
+    if (locaisArmazenados) {
+        locais = JSON.parse(locaisArmazenados);
+    }
+    // Garantir que o filtro comece com "pendente" selecionado
+    filtroStatus.value = 'pendente';
+    atualizarListaLocais();
+}); 

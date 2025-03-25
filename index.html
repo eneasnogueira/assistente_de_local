@@ -28,13 +28,20 @@
                 </div>
             </div>
             
-            <div class="filter-container">
-                <label for="filtro-status">Filtrar por status:</label>
-                <select id="filtro-status">
-                    <option value="todos">Todos</option>
-                    <option value="pendente" selected>Pendente</option>
-                    <option value="concluido">Concluído</option>
-                </select>
+            <div class="controles">
+                <div class="filtro-container">
+                    <label for="filtro-status">Filtrar por status:</label>
+                    <select id="filtro-status">
+                        <option value="todos">Todos</option>
+                        <option value="pendente" selected>Pendente</option>
+                        <option value="concluido">Concluído</option>
+                    </select>
+                </div>
+                <div class="acoes-container">
+                    <button id="btn-ordenar-ia" class="btn-ordenar-ia">
+                        <i class="fa-solid fa-sort"></i> IA-ordenar por bairro
+                    </button>
+                </div>
             </div>
             
             <table id="tabela-locais">
@@ -94,7 +101,7 @@
                 <div class="form-group">
                     <label for="status">Status:</label>
                     <select id="status" required>
-                        <option value="pendente">Pendente</option>
+                        <option value="pendente" selected>Pendente</option>
                         <option value="concluido">Concluído</option>
                     </select>
                 </div>

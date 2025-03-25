@@ -495,4 +495,35 @@ button i {
     margin-left: 8px;
     color: #e74c3c;
     font-style: italic;
+}
+
+.btn-ordenar-ia {
+    background-color: #8e44ad;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    margin-right: 5px;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+}
+
+.btn-ordenar-ia:hover {
+    background-color: #7d3c98;
+}
+
+.bairro-header {
+    background-color: #f0e6f6;
+}
+
+.bairro-nome {
+    padding: 8px 12px;
+    font-weight: bold;
+    color: #7d3c98;
+    font-size: 1.1rem;
+}
+
+.bairro-nome i {
+    margin-right: 8px;
 } 
