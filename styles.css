@@ -637,4 +637,142 @@ button i {
 
 .bairro-nome i {
     margin-right: 8px;
+}
+
+/* Estilos para o modal de anotações */
+.anotacoes-modal {
+    max-width: 600px;
+    width: 90%;
+    padding: 25px;
+    border-radius: 12px;
+}
+
+.anotacoes-modal h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.4em;
+    display: flex;
+    align-items: center;
+}
+
+.anotacoes-modal h3 i {
+    margin-right: 10px;
+    color: #3498db;
+}
+
+.btn-fechar-modal {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    font-size: 20px;
+    color: #666;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.btn-fechar-modal:hover {
+    background-color: #f0f0f0;
+    color: #e74c3c;
+    transform: scale(1.1);
+}
+
+.anotacoes-conteudo {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    white-space: pre-wrap;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.5;
+    border: 1px solid #e9ecef;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.modal-buttons button {
+    min-width: 120px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-fechar {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-fechar:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-fechar i {
+    font-size: 16px;
+}
+
+/* Quando não há anotações */
+.anotacoes-conteudo.sem-anotacoes {
+    text-align: center;
+    padding: 30px;
+}
+
+.anotacoes-conteudo.sem-anotacoes i {
+    font-size: 32px;
+    color: #3498db;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.anotacoes-conteudo.sem-anotacoes p {
+    font-size: 16px;
+    color: #666;
+    margin: 0;
+}
+
+/* Botão ver anotações */
+.btn-ver-anotacoes {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-ver-anotacoes:hover {
+    background-color: #2980b9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-ver-anotacoes i {
+    font-size: 16px;
 } 

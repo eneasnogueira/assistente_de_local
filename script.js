@@ -71,7 +71,8 @@ function adicionarLocal(e) {
         telefoneVitima,
         tipoExame,
         resumoCaso,
-        anexos: arquivosParaAnexar
+        anexos: arquivosParaAnexar,
+        anotacoes: modoEdicao ? localOriginal.anotacoes : ''
     };
     
     locais.push(novoLocal);
@@ -337,16 +338,24 @@ function atualizarListaLocais() {
             <td>${local.rep}</td>
             <td>${local.endereco}</td>
             <td class="status-${local.status} ${local.comPrazo ? 'com-prazo' : ''}">
-                <span class="status-indicator" onclick="mudarStatusLocal(${local.id})"></span>
-                <span class="status-text">${local.status === 'pendente' ? 'Pendente' : 
+                <span class="status-indicator" onclick="mudarStatusLocal('${local.id}')"></span>
+                <span class="status-text">
+                    ${local.status === 'pendente' ? 'Pendente' : 
                     local.status === 'atendido' ? 'Atendido' : 
-                    'Arquivado'}</span>
+                    'Arquivado'}
+                    ${local.anotacoes ? ' <i class="fa-solid fa-note-sticky"></i>' : ''}
+                </span>
             </td>
             <td>
                 <div class="acoes-container">
-                    <button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
-                        <i class="fa-solid fa-map-location-dot"></i> Maps
-                    </button>
+                    ${local.status === 'pendente' ? 
+                        `<button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
+                            <i class="fa-solid fa-map-location-dot"></i> Maps
+                        </button>` : 
+                        `<button class="btn-ver-anotacoes" onclick="mudarStatusLocal('${local.id}')">
+                            <i class="fa-solid fa-note-sticky"></i> Ver Anotações
+                        </button>`
+                    }
                 </div>
             </td>
         `;
@@ -1116,16 +1125,24 @@ function atualizarListaLocaisAgrupados() {
             <td>${local.rep}</td>
             <td>${local.endereco}</td>
             <td class="status-${local.status} ${local.comPrazo ? 'com-prazo' : ''}">
-                <span class="status-indicator" onclick="mudarStatusLocal(${local.id})"></span>
-                <span class="status-text">${local.status === 'pendente' ? 'Pendente' : 
+                <span class="status-indicator" onclick="mudarStatusLocal('${local.id}')"></span>
+                <span class="status-text">
+                    ${local.status === 'pendente' ? 'Pendente' : 
                     local.status === 'atendido' ? 'Atendido' : 
-                    'Arquivado'}</span>
+                    'Arquivado'}
+                    ${local.anotacoes ? ' <i class="fa-solid fa-note-sticky"></i>' : ''}
+                </span>
             </td>
             <td>
                 <div class="acoes-container">
-                    <button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
-                        <i class="fa-solid fa-map-location-dot"></i> Maps
-                    </button>
+                    ${local.status === 'pendente' ? 
+                        `<button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
+                            <i class="fa-solid fa-map-location-dot"></i> Maps
+                        </button>` : 
+                        `<button class="btn-ver-anotacoes" onclick="mudarStatusLocal('${local.id}')">
+                            <i class="fa-solid fa-note-sticky"></i> Ver Anotações
+                        </button>`
+                    }
                 </div>
             </td>
         `;
@@ -1202,36 +1219,79 @@ function arquivarPorRep() {
     atualizarListaLocais();
 }
 
-function mudarStatusLocal(localIdOrObj) {
-    let localId;
-    
-    // Determinar o ID do local com base no tipo do parâmetro
-    if (typeof localIdOrObj === 'string') {
-        try {
-            // Tentar parsear como JSON
-            const localObj = JSON.parse(localIdOrObj);
-            localId = localObj.id;
-        } catch (e) {
-            // Se não for JSON, assume que é o ID diretamente
-            localId = localIdOrObj;
-        }
-    } else if (typeof localIdOrObj === 'object') {
-        localId = localIdOrObj.id;
-    } else {
-        localId = localIdOrObj;
-    }
-    
+function mudarStatusLocal(localId) {
     // Encontrar o local pelo ID
-    const localIndex = locais.findIndex(l => l.id === localId);
-    if (localIndex === -1) return;
+    const localIndex = locais.findIndex(l => l.id == localId);
+    if (localIndex === -1) {
+        console.error('Local não encontrado:', localId);
+        return;
+    }
     
     const local = locais[localIndex];
     
     if (local.status === 'arquivado') return; // Não permite mudar status de arquivado
     
     if (local.status === 'pendente') {
-        if (confirm(`Deseja marcar o local REP ${local.rep} como atendido?`)) {
-            local.status = 'atendido';
+        // Criar modal para anotações
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '1000';
+        
+        modal.innerHTML = `
+            <div class="modal-content anotacoes-modal" style="background-color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>
+                        <i class="fa-solid fa-note-sticky" style="color: #3498db; margin-right: 10px;"></i>
+                        Adicionar Anotações
+                    </h3>
+                    <button class="btn-fechar-modal" style="background: none; border: none; cursor: pointer; padding: 5px; font-size: 20px; color: #666;">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div style="margin-bottom: 15px; color: #666;">
+                    <strong>REP:</strong> ${local.rep}<br>
+                    <strong>Endereço:</strong> ${local.endereco}
+                </div>
+                <textarea id="anotacoes-caso" rows="6" placeholder="Digite as anotações do caso..." style="width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; font-family: inherit; font-size: 15px; resize: vertical; min-height: 150px; line-height: 1.5;">${local.anotacoes || ''}</textarea>
+                <div class="modal-buttons">
+                    <button class="btn-cancelar" style="background-color: #e74c3c; color: white; min-width: 120px; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 15px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fa-solid fa-times"></i>
+                        Cancelar
+                    </button>
+                    <button class="btn-confirmar" style="background-color: #2ecc71; color: white; min-width: 120px; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 15px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fa-solid fa-check"></i>
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Eventos dos botões
+        const fecharModal = () => {
+            document.body.removeChild(modal);
+        };
+        
+        modal.querySelector('.btn-fechar-modal').addEventListener('click', fecharModal);
+        modal.querySelector('.btn-cancelar').addEventListener('click', fecharModal);
+        
+        modal.querySelector('.btn-confirmar').addEventListener('click', () => {
+            const anotacoes = document.getElementById('anotacoes-caso').value;
+            
+            // Atualizar o local diretamente no array
+            locais[localIndex].anotacoes = anotacoes;
+            locais[localIndex].status = 'atendido';
+            
             salvarNoLocalStorage();
             
             // Decidir qual função de atualização chamar com base na visualização atual
@@ -1240,6 +1300,105 @@ function mudarStatusLocal(localIdOrObj) {
             } else {
                 atualizarListaLocais();
             }
-        }
+            
+            fecharModal();
+        });
+        
+        // Fechar modal ao clicar fora
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                fecharModal();
+            }
+        });
+    } else if (local.status === 'atendido' && local.anotacoes) {
+        // Mostrar anotações em um modal
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '1000';
+        
+        modal.innerHTML = `
+            <div class="modal-content anotacoes-modal" style="background-color: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                <h3>Anotações do Caso</h3>
+                <div class="anotacoes-conteudo">${local.anotacoes}</div>
+                <div class="modal-buttons">
+                    <button class="btn-fechar">Fechar</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Evento do botão fechar
+        modal.querySelector('.btn-fechar').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+    } else if (local.status === 'atendido' || local.status === 'arquivado') {
+        // Caso não tenha anotações
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '1000';
+        
+        modal.innerHTML = `
+            <div class="modal-content anotacoes-modal" style="background-color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>
+                        <i class="fa-solid fa-note-sticky"></i>
+                        Anotações do Caso
+                    </h3>
+                    <button class="btn-fechar-modal">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div style="margin-bottom: 15px; color: #666;">
+                    <strong>REP:</strong> ${local.rep}<br>
+                    <strong>Endereço:</strong> ${local.endereco}
+                </div>
+                <div class="anotacoes-conteudo sem-anotacoes">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <p>Este caso não possui anotações.</p>
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn-fechar">
+                        <i class="fa-solid fa-check"></i>
+                        OK
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Eventos dos botões de fechar
+        const fecharModal = () => {
+            document.body.removeChild(modal);
+        };
+        
+        modal.querySelector('.btn-fechar-modal').addEventListener('click', fecharModal);
+        modal.querySelector('.btn-fechar').addEventListener('click', fecharModal);
+        
+        // Fechar modal ao clicar fora
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                fecharModal();
+            }
+        });
     }
 } 
