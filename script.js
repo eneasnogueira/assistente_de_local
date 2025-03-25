@@ -366,7 +366,7 @@ function atualizarListaLocais() {
             <td>${local.rep}</td>
             <td>${local.endereco}</td>
             <td class="status-${local.status} ${local.comPrazo ? 'com-prazo' : ''}">
-                <span class="status-indicator" onclick="mudarStatusLocal('${local.id}')"></span>
+                <span class="status-indicator"></span>
                 <span class="status-text">
                     ${local.status === 'pendente' ? 'Pendente' : 
                     local.status === 'atendido' ? 'Atendido' : 
@@ -380,6 +380,9 @@ function atualizarListaLocais() {
                     ${local.status === 'pendente' ? 
                         `<button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
                             <i class="fa-solid fa-map-location-dot"></i> Maps
+                        </button>
+                        <button class="btn-atender" onclick="mudarStatusLocal('${local.id}')">
+                            <i class="fa-solid fa-clipboard-check"></i> Atender
                         </button>` : 
                         `<button class="btn-ver-anotacoes" onclick="mudarStatusLocal('${local.id}')">
                             <i class="fa-solid fa-note-sticky"></i> Ver Anotações
@@ -846,6 +849,13 @@ btnPreencherIA.addEventListener('click', preencherFormularioComIA);
 btnConfigAPI.addEventListener('click', configurarAPI);
 document.getElementById('btn-ordenar-ia').addEventListener('click', ordenarPorBairroIA);
 
+// Adicionar event listener para a tecla Esc
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalOverlay.classList.contains('modal-visible')) {
+        fecharModal();
+    }
+});
+
 // Fechar modal ao clicar fora do conteúdo
 modalOverlay.addEventListener('click', function(e) {
     if (e.target === modalOverlay) {
@@ -1214,7 +1224,7 @@ function atualizarListaLocaisAgrupados() {
             <td>${local.rep}</td>
             <td>${local.endereco}</td>
             <td class="status-${local.status} ${local.comPrazo ? 'com-prazo' : ''}">
-                <span class="status-indicator" onclick="mudarStatusLocal('${local.id}')"></span>
+                <span class="status-indicator"></span>
                 <span class="status-text">
                     ${local.status === 'pendente' ? 'Pendente' : 
                     local.status === 'atendido' ? 'Atendido' : 
@@ -1228,6 +1238,9 @@ function atualizarListaLocaisAgrupados() {
                     ${local.status === 'pendente' ? 
                         `<button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
                             <i class="fa-solid fa-map-location-dot"></i> Maps
+                        </button>
+                        <button class="btn-atender" onclick="mudarStatusLocal('${local.id}')">
+                            <i class="fa-solid fa-clipboard-check"></i> Atender
                         </button>` : 
                         `<button class="btn-ver-anotacoes" onclick="mudarStatusLocal('${local.id}')">
                             <i class="fa-solid fa-note-sticky"></i> Ver Anotações
@@ -1414,7 +1427,7 @@ function mudarStatusLocal(localId) {
                         <div style="margin-top: 20px;">
                             <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 16px;">Autoridade no Local</h4>
                             <div>
-                                <label style="display: block; margin-bottom: 5px;">Delegado</label>
+                                <label style="display: block; margin-bottom: 5px;">Delegado(a)</label>
                                 <input type="text" id="preservacao-delegado" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                             </div>
                         </div>
@@ -1422,11 +1435,11 @@ function mudarStatusLocal(localId) {
                 </div>
                 
                 <div class="modal-buttons">
-                    <button class="btn-cancelar" style="background-color: #e74c3c; color: white; min-width: 120px; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 15px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <button class="btn-cancelar">
                         <i class="fa-solid fa-times"></i>
                         Cancelar
                     </button>
-                    <button class="btn-confirmar" style="background-color: #2ecc71; color: white; min-width: 120px; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 15px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <button class="btn-confirmar">
                         <i class="fa-solid fa-check"></i>
                         Confirmar
                     </button>
@@ -1619,9 +1632,13 @@ function mudarStatusLocal(localId) {
                 ` : ''}
                 
                 <div class="modal-buttons">
-                    <button class="btn-fechar">
+                    <button class="btn-cancelar">
+                        <i class="fa-solid fa-times"></i>
+                        Cancelar
+                    </button>
+                    <button class="btn-confirmar">
                         <i class="fa-solid fa-check"></i>
-                        OK
+                        Confirmar
                     </button>
                 </div>
             </div>

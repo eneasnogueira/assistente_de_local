@@ -250,59 +250,23 @@ table th {
 
 .status-indicator {
     display: inline-block;
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     margin-right: 8px;
-    cursor: pointer;
-    transition: transform 0.2s;
-    position: relative;
-}
-
-.status-indicator:hover {
-    transform: scale(1.2);
-}
-
-.status-pendente .status-indicator::after {
-    content: '\f35a';  /* Código do ícone fa-circle-right */
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    position: absolute;
-    font-size: 14px;
-    right: -10px;
-    bottom: -6px;
-    color: #d35400;
-    background-color: white;
-    border-radius: 50%;
-    padding: 2px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    transform: rotate(-45deg);  /* Rotacionar a seta para apontar para cima-direita */
+    vertical-align: middle;
 }
 
 .status-pendente .status-indicator {
-    background-color: #f39c12;
-}
-
-.status-pendente.com-prazo .status-indicator {
     background-color: #e74c3c;
 }
 
 .status-atendido .status-indicator {
-    background-color: #27ae60;
-    cursor: default;
-}
-
-.status-atendido .status-indicator:hover {
-    transform: none;
+    background-color: #2ecc71;
 }
 
 .status-arquivado .status-indicator {
-    background-color: #3498db;
-    cursor: default;
-}
-
-.status-arquivado .status-indicator:hover {
-    transform: none;
+    background-color: #95a5a6;
 }
 
 .status-text {
@@ -826,4 +790,87 @@ button i {
 
 .info-valor {
     color: #333;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.modal-buttons button {
+    min-width: 120px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-confirmar {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.btn-confirmar:hover {
+    background-color: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-cancelar {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-cancelar:hover {
+    background-color: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-fechar {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-fechar:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-fechar i {
+    font-size: 16px;
+}
+
+.btn-atender {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-atender:hover {
+    background-color: #219653;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-atender i {
+    font-size: 14px;
 } 
