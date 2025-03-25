@@ -898,4 +898,35 @@ button i {
 
 .btn-extrair-anotacoes i {
     font-size: 14px;
+}
+
+.api-key-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.api-key-input-container input {
+    padding-right: 40px;
+}
+
+.btn-toggle-password {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-toggle-password:hover {
+    color: #333;
+}
+
+.btn-toggle-password i {
+    font-size: 16px;
 } 

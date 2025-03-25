@@ -817,18 +817,100 @@ async function preencherFormularioComIA() {
 
 // Funções para configurar a API
 function configurarAPI() {
-    const apiKeyAtual = localStorage.getItem('openai_api_key') || '';
-    const novaChave = prompt('Digite sua chave da API da OpenAI:', apiKeyAtual);
+    const apiKey = localStorage.getItem('openai_api_key') || '';
     
-    if (novaChave !== null) {
-        if (novaChave.trim() === '') {
+    // Criar e mostrar o modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay modal-visible';
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="form-header">
+                <h3><i class="fa-solid fa-key"></i> Configurar API Key</h3>
+                <button type="button" class="btn-fechar-modal">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="apiKey">API Key da OpenAI:</label>
+                <div class="api-key-input-container">
+                    <input type="password" id="apiKey" class="form-control" value="${apiKey}" placeholder="Cole sua API Key aqui">
+                    <button type="button" class="btn-toggle-password" id="togglePassword">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+                <small class="form-text text-muted">
+                    <i class="fa-solid fa-info-circle"></i>
+                    A API Key é necessária para extrair dados da requisição e BOs. 
+                    <a href="https://platform.openai.com/api-keys" target="_blank" class="api-key-link">
+                        Obtenha sua chave aqui
+                    </a>
+                </small>
+            </div>
+            
+            <div class="modal-buttons">
+                <button type="button" class="btn-confirmar" id="btnSalvarApiKey">
+                    <i class="fa-solid fa-save"></i>
+                    Salvar
+                </button>
+                <button type="button" class="btn-cancelar">
+                    <i class="fa-solid fa-times"></i>
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Adicionar funcionalidade de mostrar/ocultar senha
+    const togglePassword = modal.querySelector('#togglePassword');
+    const apiKeyInput = modal.querySelector('#apiKey');
+    
+    togglePassword.addEventListener('click', function() {
+        const type = apiKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        apiKeyInput.setAttribute('type', type);
+        this.querySelector('i').classList.toggle('fa-eye');
+        this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+    
+    // Evento para fechar o modal
+    const fecharModal = () => {
+        document.body.removeChild(modal);
+    };
+    
+    // Adicionar event listeners
+    modal.querySelector('.btn-fechar-modal').addEventListener('click', fecharModal);
+    modal.querySelector('.btn-cancelar').addEventListener('click', fecharModal);
+    
+    // Quando clicar fora do modal, fechar
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            fecharModal();
+        }
+    });
+    
+    // Quando pressionar ESC, fechar
+    document.addEventListener('keydown', function escListener(e) {
+        if (e.key === 'Escape') {
+            fecharModal();
+            document.removeEventListener('keydown', escListener);
+        }
+    });
+    
+    // Salvar a API key
+    modal.querySelector('#btnSalvarApiKey').addEventListener('click', function() {
+        const novaChave = apiKeyInput.value.trim();
+        
+        if (novaChave === '') {
             localStorage.removeItem('openai_api_key');
             alert('Chave da API removida');
         } else {
-            localStorage.setItem('openai_api_key', novaChave.trim());
+            localStorage.setItem('openai_api_key', novaChave);
             alert('Chave da API salva com sucesso!');
         }
-    }
+        
+        fecharModal();
+    });
 }
 
 // Event Listeners
