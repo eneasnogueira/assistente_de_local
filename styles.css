@@ -794,7 +794,7 @@ button i {
 
 .modal-buttons {
     display: flex;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 15px;
     margin-top: 20px;
 }
@@ -812,6 +812,7 @@ button i {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    height: 48px;
 }
 
 .btn-confirmar {
@@ -872,5 +873,29 @@ button i {
 }
 
 .btn-atender i {
+    font-size: 14px;
+}
+
+.btn-extrair-anotacoes {
+    background-color: #9b59b6;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-extrair-anotacoes:hover {
+    background-color: #8e44ad;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-extrair-anotacoes i {
     font-size: 14px;
 } 

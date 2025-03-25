@@ -870,6 +870,7 @@ atualizarListaLocais();
 window.abrirNoMaps = abrirNoMaps;
 window.toggleDetalhes = toggleDetalhes;
 window.abrirAnexo = abrirAnexo;
+window.extrairAnotacoes = extrairAnotacoes;
 window.marcarComoAtendido = marcarComoAtendido;
 window.mudarStatusLocal = mudarStatusLocal;
 
@@ -1547,6 +1548,14 @@ function mudarStatusLocal(localId) {
                 document.body.removeChild(modal);
             }
         });
+        
+        // Fechar modal ao pressionar Esc
+        document.addEventListener('keydown', function escListener(e) {
+            if (e.key === 'Escape') {
+                fecharModal();
+                document.removeEventListener('keydown', escListener);
+            }
+        });
     } else if (local.status === 'atendido' || local.status === 'arquivado') {
         // Exibir modal com as anotações
         const modal = document.createElement('div');
@@ -1576,6 +1585,10 @@ function mudarStatusLocal(localId) {
                 <div class="form-group">
                     <p><strong>REP:</strong> ${local.rep}</p>
                     <p><strong>Endereço:</strong> ${local.endereco}</p>
+                    ${local.nomeVitima ? `<p><strong>Nome da Vítima:</strong> ${local.nomeVitima}</p>` : ''}
+                    ${local.telefoneVitima ? `<p><strong>Telefone da Vítima:</strong> ${local.telefoneVitima}</p>` : ''}
+                    ${local.tipoExame ? `<p><strong>Tipo de Exame:</strong> ${local.tipoExame}</p>` : ''}
+                    ${local.resumoCaso ? `<p><strong>Resumo do Caso:</strong> ${local.resumoCaso}</p>` : ''}
                     
                     ${local.dataInicioAtendimentoFormatada ? 
                     `<p><strong>Início do atendimento:</strong> ${local.dataInicioAtendimentoFormatada}</p>` : ''}
@@ -1632,19 +1645,31 @@ function mudarStatusLocal(localId) {
                 ` : ''}
                 
                 <div class="modal-buttons">
-                    <button class="btn-cancelar">
-                        <i class="fa-solid fa-times"></i>
-                        Cancelar
+                    ${temAnotacoes ? `
+                    <button class="btn-extrair-anotacoes" id="btn-extrair-${local.id}">
+                        <i class="fa-solid fa-copy"></i>
+                        Extrair Anotações
                     </button>
-                    <button class="btn-confirmar">
-                        <i class="fa-solid fa-check"></i>
-                        Confirmar
+                    ` : ''}
+                    <button class="btn-fechar">
+                        <i class="fa-solid fa-times"></i>
+                        Fechar
                     </button>
                 </div>
             </div>
         `;
         
         document.body.appendChild(modal);
+        
+        // Adicionar o event listener para o botão de extrair anotações
+        if (temAnotacoes) {
+            const btnExtrair = modal.querySelector(`#btn-extrair-${local.id}`);
+            if (btnExtrair) {
+                btnExtrair.addEventListener('click', function() {
+                    extrairAnotacoes(local);
+                });
+            }
+        }
         
         // Eventos dos botões de fechar
         const fecharModal = () => {
@@ -1660,5 +1685,83 @@ function mudarStatusLocal(localId) {
                 fecharModal();
             }
         });
+        
+        // Fechar modal ao pressionar Esc
+        document.addEventListener('keydown', function escListener(e) {
+            if (e.key === 'Escape') {
+                fecharModal();
+                document.removeEventListener('keydown', escListener);
+            }
+        });
     }
-} 
+}
+
+// Função para extrair anotações
+function extrairAnotacoes(local) {
+    // Criar o texto formatado com todas as informações
+    let texto = `REP: ${local.rep}\n`;
+    texto += `Endereço: ${local.endereco}\n`;
+    
+    if (local.nomeVitima) texto += `Nome da Vítima: ${local.nomeVitima}\n`;
+    if (local.telefoneVitima) texto += `Telefone da Vítima: ${local.telefoneVitima}\n`;
+    if (local.tipoExame) texto += `Tipo de Exame: ${local.tipoExame}\n`;
+    if (local.resumoCaso) texto += `Resumo do Caso: ${local.resumoCaso}\n`;
+    
+    if (local.dataInicioAtendimentoFormatada) texto += `\nInício do Atendimento: ${local.dataInicioAtendimentoFormatada}`;
+    if (local.dataFimAtendimentoFormatada) texto += `\nFim do Atendimento: ${local.dataFimAtendimentoFormatada}`;
+    
+    if (local.preservacao) {
+        texto += `\n\nPreservação: ${local.preservacao.preservado === 'sim' ? 'Sim' : 'Não'}`;
+        if (local.preservacao.preservado === 'sim') {
+            texto += '\n\nEquipe de Preservação:';
+            if (local.preservacao.oficial) texto += `\nOficial: ${local.preservacao.oficial}`;
+            if (local.preservacao.registro) texto += `\nRegistro: ${local.preservacao.registro}`;
+            if (local.preservacao.viatura) texto += `\nViatura: ${local.preservacao.viatura}`;
+            if (local.preservacao.delegado) texto += `\nDelegado: ${local.preservacao.delegado}`;
+        }
+    }
+    
+    if (local.anotacoes) {
+        texto += `\n\nAnotações:\n${local.anotacoes}`;
+    }
+    
+    console.log("Tentando copiar:", texto);
+    
+    // Criar um elemento input para usar com execCommand
+    const input = document.createElement('textarea');
+    input.value = texto;
+    input.style.position = 'fixed';
+    input.style.left = '0';
+    input.style.top = '0';
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
+    document.body.appendChild(input);
+    
+    // Selecionar o texto
+    input.focus();
+    input.select();
+    
+    let mensagem = '';
+    
+    // Tentar copiar com execCommand
+    try {
+        const copyResult = document.execCommand('copy');
+        mensagem = copyResult ? 
+            'Informações do caso copiadas para a área de transferência!' : 
+            'Não foi possível copiar automaticamente. Tente copiar manualmente.';
+    } catch (e) {
+        console.error("Erro no execCommand:", e);
+        mensagem = 'Erro ao copiar. Tente copiar manualmente.';
+    }
+    
+    // Remover o elemento
+    document.body.removeChild(input);
+    
+    // Exibir mensagem
+    alert(mensagem);
+    
+    // Se execCommand falhar, pelo menos mostre o texto em um prompt para facilitar a cópia manual
+    if (mensagem.includes('não foi possível') || mensagem.includes('erro')) {
+        prompt('Copie o texto abaixo manualmente (Ctrl+C):', texto);
+    }
+}
