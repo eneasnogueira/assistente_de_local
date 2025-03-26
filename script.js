@@ -1,4 +1,4 @@
-// Array para armazenar os locais
+﻿// Array para armazenar os locais
 let locais = JSON.parse(localStorage.getItem('locais')) || [];
 
 // Elementos DOM
@@ -311,33 +311,44 @@ function atualizarListaLocais() {
         ? locais 
         : locais.filter(local => local.status === filtro);
     
-    // Ordenar locais atendidos e arquivados por data de atendimento (mais recentes primeiro)
-    if (filtro === 'atendido' || filtro === 'arquivado' || filtro === 'todos') {
-        locaisFiltrados = locaisFiltrados.sort((a, b) => {
-            // Manter pendentes na ordem atual
-            if (a.status === 'pendente' && b.status === 'pendente') return 0;
-            
-            // Sempre mostrar pendentes primeiro se estiver mostrando todos
-            if (filtro === 'todos') {
-                if (a.status === 'pendente') return -1;
-                if (b.status === 'pendente') return 1;
+    // Ordenar locais primeiro por status (pendentes primeiro)
+    // depois por cidade/bairro (não identificados primeiro)
+    // e finalmente por data de atendimento
+    locaisFiltrados = locaisFiltrados.sort((a, b) => {
+        // Primeiro critério: status (pendentes primeiro)
+        if (filtro === 'todos') {
+            if (a.status === 'pendente' && b.status !== 'pendente') return -1;
+            if (a.status !== 'pendente' && b.status === 'pendente') return 1;
+        }
+        
+        // Segundo critério: cidade não identificada primeiro
+        const aCidadeNaoIdentificada = !a.cidade || a.cidade === "Cidade não identificada";
+        const bCidadeNaoIdentificada = !b.cidade || b.cidade === "Cidade não identificada";
+        if (aCidadeNaoIdentificada && !bCidadeNaoIdentificada) return -1;
+        if (!aCidadeNaoIdentificada && bCidadeNaoIdentificada) return 1;
+        
+        // Terceiro critério: ordenar por cidade
+        if (a.cidade && b.cidade && a.cidade !== b.cidade) {
+            return a.cidade.localeCompare(b.cidade);
+        }
+        
+        // Quarto critério: ordenar por bairro
+        if (a.bairro && b.bairro && a.bairro !== b.bairro) {
+            return a.bairro.localeCompare(b.bairro);
+        }
+        
+        // Quinto critério: ordenar por data de atendimento (mais recentes primeiro)
+        if ((a.status === 'atendido' || a.status === 'arquivado') && 
+            (b.status === 'atendido' || b.status === 'arquivado')) {
+            if (a.dataAtendimento && b.dataAtendimento) {
+                return new Date(b.dataAtendimento) - new Date(a.dataAtendimento);
             }
-            
-            // Ordenar atendidos e arquivados por data (mais recentes primeiro)
-            if ((a.status === 'atendido' || a.status === 'arquivado') && 
-                (b.status === 'atendido' || b.status === 'arquivado')) {
-                // Se ambos têm data de atendimento, ordenar por data (mais recente primeiro)
-                if (a.dataAtendimento && b.dataAtendimento) {
-                    return new Date(b.dataAtendimento) - new Date(a.dataAtendimento);
-                }
-                // Se apenas um tem data, colocar o que tem data primeiro
-                if (a.dataAtendimento) return -1;
-                if (b.dataAtendimento) return 1;
-            }
-            
-            return 0;
-        });
-    }
+            if (a.dataAtendimento) return -1;
+            if (b.dataAtendimento) return 1;
+        }
+        
+        return 0;
+    });
     
     if (locaisFiltrados.length === 0) {
         const tr = document.createElement('tr');
@@ -348,7 +359,39 @@ function atualizarListaLocais() {
         return;
     }
     
+    // Variáveis para controlar os headers
+    let cidadeAtual = null;
+    let bairroAtual = null;
+    
     locaisFiltrados.forEach(local => {
+        // Adicionar header de cidade se mudou
+        if (local.cidade && local.cidade !== cidadeAtual) {
+            cidadeAtual = local.cidade;
+            const trCidade = document.createElement('tr');
+            trCidade.className = 'cidade-header';
+            trCidade.innerHTML = `
+                <td colspan="5" class="cidade-nome">
+                    <i class="fa-solid fa-city"></i> ${local.cidade}
+                </td>
+            `;
+            listaLocais.appendChild(trCidade);
+            bairroAtual = null; // Resetar bairro atual ao mudar de cidade
+        }
+        
+        // Adicionar header de bairro se mudou
+        if (local.bairro && local.bairro !== bairroAtual) {
+            bairroAtual = local.bairro;
+            const trBairro = document.createElement('tr');
+            trBairro.className = 'bairro-header';
+            trBairro.innerHTML = `
+                <td colspan="5" class="bairro-nome">
+                    <i class="fa-solid fa-map-marker-alt"></i> ${local.bairro}
+                </td>
+            `;
+            listaLocais.appendChild(trBairro);
+        }
+        
+        // Renderizar local normalmente
         const temDetalhes = local.nomeVitima || local.telefoneVitima || local.tipoExame || local.resumoCaso || (local.anexos && local.anexos.length > 0);
         
         // Linha principal
@@ -1127,6 +1170,52 @@ async function ordenarPorBairroIA() {
             // Criar um conjunto de IDs já processados
             const idsProcessados = new Set();
             
+            // Criar um conjunto de todos os IDs que têm cidade/bairro identificado
+            const idsComCidadeBairro = new Set();
+            resultados.cidades.forEach(cidade => {
+                cidade.bairros.forEach(bairro => {
+                    bairro.locais.forEach(id => {
+                        idsComCidadeBairro.add(id);
+                        // Salvar cidade e bairro no local correspondente
+                        const local = locais.find(l => l.id === id);
+                        if (local) {
+                            local.cidade = cidade.nome;
+                            local.bairro = bairro.nome;
+                        }
+                    });
+                });
+            });
+            
+            // Marcar locais não identificados
+            locais.forEach(local => {
+                if (!idsComCidadeBairro.has(local.id)) {
+                    local.cidade = "Cidade não identificada";
+                    local.bairro = "Bairro não identificado";
+                }
+            });
+            
+            // Salvar no localStorage para persistir as alterações
+            salvarNoLocalStorage();
+            
+            // Encontrar locais não processados (sem cidade/bairro identificado)
+            const locaisNaoProcessados = locaisFiltrados.filter(local => 
+                !local.isCidadeHeader && 
+                !local.isBairroHeader && 
+                !idsComCidadeBairro.has(local.id)
+            );
+            
+            // Se houver locais não processados, adicionar uma seção especial para eles NO TOPO
+            if (locaisNaoProcessados.length > 0) {
+                locaisOrdenados.push({
+                    isCidadeHeader: true,
+                    cidade: "Cidade ou bairro não encontrados"
+                });
+                locaisOrdenados.push(...locaisNaoProcessados);
+                
+                // Adicionar IDs processados
+                locaisNaoProcessados.forEach(local => idsProcessados.add(local.id));
+            }
+            
             // Para cada cidade
             resultados.cidades.forEach(cidade => {
                 let temLocaisNaCidade = false;
@@ -1136,7 +1225,7 @@ async function ordenarPorBairroIA() {
                 cidade.bairros.forEach(bairro => {
                     const locaisDoBairro = bairro.locais
                         .map(id => locaisFiltrados.find(l => l.id === id))
-                        .filter(local => local !== undefined);
+                        .filter(local => local !== undefined && !idsProcessados.has(local.id));
 
                     if (locaisDoBairro.length > 0) {
                         temLocaisNaCidade = true;
@@ -1162,22 +1251,6 @@ async function ordenarPorBairroIA() {
                     locaisOrdenados.push(...locaisDaCidade);
                 }
             });
-            
-            // Encontrar locais não processados (sem cidade/bairro identificado)
-            const locaisNaoProcessados = locaisFiltrados.filter(local => 
-                !local.isCidadeHeader && 
-                !local.isBairroHeader && 
-                !idsProcessados.has(local.id)
-            );
-            
-            // Se houver locais não processados, adicionar uma seção especial para eles
-            if (locaisNaoProcessados.length > 0) {
-                locaisOrdenados.push({
-                    isCidadeHeader: true,
-                    cidade: "Cidade ou bairro não encontrados"
-                });
-                locaisOrdenados.push(...locaisNaoProcessados);
-            }
             
             // Atualize a lista de locais temporariamente (sem salvar)
             const locaisOriginal = [...locais];

@@ -1,0 +1,1076 @@
+                    A API Key é necessária para extrair dados da requisição e BOs. 
+                    <a href="https://platform.openai.com/api-keys" target="_blank" class="api-key-link">
+                        Obtenha sua chave aqui
+                    </a>
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="senhaAPI">Senha para proteger sua chave:</label>
+                <div class="api-key-input-container">
+                    <input type="password" id="senhaAPI" class="form-control" value="" placeholder="Crie uma senha para proteger sua chave">
+                    <button type="button" class="btn-toggle-password" id="toggleSenha">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+                <small class="form-text text-muted">
+                    <i class="fa-solid fa-shield-alt"></i>
+                    Esta senha será usada para criptografar sua chave API. Você precisará dela para usar a IA.
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmaSenhaAPI">Confirme a senha:</label>
+                <input type="password" id="confirmaSenhaAPI" class="form-control" value="" placeholder="Confirme sua senha">
+                <small class="form-text text-muted">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    Anote esta senha! Se esquecê-la, precisará configurar sua chave API novamente.
+                </small>
+            </div>
+            
+            <div class="modal-buttons">
+                <button type="button" class="btn-confirmar" id="btnSalvarApiKey">
+                    <i class="fa-solid fa-save"></i>
+                    Salvar
+                </button>
+                <button type="button" class="btn-cancelar">
+                    <i class="fa-solid fa-times"></i>
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Adicionar funcionalidade de mostrar/ocultar senha
+    const togglePassword = modal.querySelector('#togglePassword');
+    const apiKeyInput = modal.querySelector('#apiKey');
+    
+    togglePassword.addEventListener('click', function() {
+        const type = apiKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        apiKeyInput.setAttribute('type', type);
+        this.querySelector('i').classList.toggle('fa-eye');
+        this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+    
+    // Adicionar funcionalidade de mostrar/ocultar senha de proteção
+    const toggleSenha = modal.querySelector('#toggleSenha');
+    const senhaInput = modal.querySelector('#senhaAPI');
+    
+    toggleSenha.addEventListener('click', function() {
+        const type = senhaInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        senhaInput.setAttribute('type', type);
+        this.querySelector('i').classList.toggle('fa-eye');
+        this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+    
+    // Evento para fechar o modal
+    const fecharModal = () => {
+        document.body.removeChild(modal);
+    };
+    
+    // Adicionar event listeners
+    modal.querySelector('.btn-fechar-modal').addEventListener('click', fecharModal);
+    modal.querySelector('.btn-cancelar').addEventListener('click', fecharModal);
+    
+    // Quando clicar fora do modal, fechar
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            fecharModal();
+        }
+    });
+    
+    // Quando pressionar ESC, fechar
+    document.addEventListener('keydown', function escListener(e) {
+        if (e.key === 'Escape') {
+            fecharModal();
+            document.removeEventListener('keydown', escListener);
+        }
+    });
+    
+    // Salvar a API key
+    modal.querySelector('#btnSalvarApiKey').addEventListener('click', async function() {
+        const novaChave = apiKeyInput.value.trim();
+        const senha = senhaInput.value.trim();
+        const confirmaSenha = modal.querySelector('#confirmaSenhaAPI').value.trim();
+        
+        if (novaChave === '') {
+            alert('Por favor, insira uma chave de API válida.');
+            return;
+        }
+        
+        if (senha === '') {
+            alert('Por favor, insira uma senha para proteger sua chave API.');
+            return;
+        }
+        
+        if (senha !== confirmaSenha) {
+            alert('As senhas não coincidem. Por favor, verifique.');
+            return;
+        }
+        
+        try {
+            // Salvar chave criptografada
+            const resultado = await salvarChaveAPISegura(novaChave, senha);
+            
+            if (resultado) {
+                alert('Chave da API salva com segurança!');
+                fecharModal();
+            } else {
+                alert('Erro ao salvar a chave. Verifique a senha e tente novamente.');
+            }
+        } catch (erro) {
+            console.error('Erro ao criptografar chave:', erro);
+            alert('Ocorreu um erro ao salvar a chave: ' + erro.message);
+        }
+    });
+}
+
+// Event Listeners
+form.addEventListener('submit', adicionarLocal);
+filtroStatus.addEventListener('change', atualizarListaLocais);
+btnSalvarArquivo.addEventListener('click', salvarParaArquivo);
+btnCarregarArquivo.addEventListener('click', () => inputCarregarArquivo.click());
+inputCarregarArquivo.addEventListener('change', carregarDeArquivo);
+btnMostrarForm.addEventListener('click', abrirModal);
+btnFecharForm.addEventListener('click', fecharModal);
+btnEditarPorRep.addEventListener('click', editarPorRep);
+btnExcluirPorRep.addEventListener('click', excluirPorRep);
+btnArquivarPorRep.addEventListener('click', arquivarPorRep);
+inputAnexos.addEventListener('change', processarArquivosSelecionados);
+btnCarregarImagemIA.addEventListener('click', carregarImagensParaIA);
+inputImagemParaIA.addEventListener('change', processarImagensSelecionadas);
+btnPreencherIA.addEventListener('click', preencherFormularioComIA);
+btnConfigAPI.addEventListener('click', configurarAPI);
+document.getElementById('btn-ordenar-ia').addEventListener('click', ordenarPorBairroIA);
+
+// Adicionar event listener para a tecla Esc
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalOverlay.classList.contains('modal-visible')) {
+        fecharModal();
+    }
+});
+
+// Fechar modal ao clicar fora do conteúdo
+modalOverlay.addEventListener('click', function(e) {
+    if (e.target === modalOverlay) {
+        fecharModal();
+    }
+});
+
+// Inicializar a lista de locais
+atualizarListaLocais();
+
+// Expor funções para o escopo global para serem acessíveis através de eventos inline
+                        `<button class="btn-ver-anotacoes" onclick="mudarStatusLocal('${local.id}')">
+                            <i class="fa-solid fa-note-sticky"></i> Ver Anotações
+                        </button>`
+                    }
+                </div>
+            </td>
+        `;
+        
+        listaLocais.appendChild(tr);
+        
+        // Linha de detalhes (oculta inicialmente)
+        if (temDetalhes) {
+            const trDetalhes = document.createElement('tr');
+            trDetalhes.className = 'linha-detalhes';
+            trDetalhes.id = `detalhes-${local.id}`;
+            trDetalhes.style.display = 'none';
+            
+            let detalhesHTML = '<td colspan="5" class="detalhes-container">';
+            
+            if (local.nomeVitima) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-user"></i> Nome da vítima:</span> ${local.nomeVitima}</div>`;
+            if (local.telefoneVitima) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-phone"></i> Telefone da vítima:</span> ${local.telefoneVitima}</div>`;
+            if (local.tipoExame) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-stethoscope"></i> Tipo de exame:</span> ${local.tipoExame}</div>`;
+            if (local.resumoCaso) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-file-lines"></i> Resumo do caso:</span> <div class="detalhe-resumo">${local.resumoCaso}</div></div>`;
+            
+            // Adicionar anexos se existirem
+            if (local.anexos && local.anexos.length > 0) {
+                detalhesHTML += `<div class="detalhe-item">
+                    <span class="detalhe-label"><i class="fa-solid fa-paperclip"></i> Anexos:</span>
+                    <div class="lista-anexos">`;
+                
+                local.anexos.forEach((anexo, index) => {
+                    detalhesHTML += `
+                        <div class="anexo-item">
+                            <i class="fa-solid fa-file"></i>
+                            <a href="#" onclick="abrirAnexo('${anexo.conteudo}', '${anexo.tipo}', '${anexo.nome.replace(/'/g, "\\'")}'); return false;">
+                                ${anexo.nome}
+                            </a>
+                            <span class="tamanho-arquivo">(${formatarTamanhoArquivo(anexo.tamanho)})</span>
+                        </div>
+                    `;
+                });
+                
+                detalhesHTML += `</div></div>`;
+            }
+            
+            detalhesHTML += '</td>';
+            
+            trDetalhes.innerHTML = detalhesHTML;
+            listaLocais.appendChild(trDetalhes);
+        }
+    });
+}
+
+// Carregar locais do localStorage ao iniciar
+window.addEventListener('DOMContentLoaded', () => {
+    const locaisArmazenados = localStorage.getItem('locais');
+    if (locaisArmazenados) {
+        locais = JSON.parse(locaisArmazenados);
+    }
+    
+    // Verificar se há uma chave no formato antigo para migrar
+    verificarEMigrarChaveAntiga();
+    
+    // Garantir que o filtro comece com "pendente" selecionado
+    filtroStatus.value = 'pendente';
+    atualizarListaLocais();
+});
+
+// Função para verificar e migrar chave da API no formato antigo
+async function verificarEMigrarChaveAntiga() {
+    const chaveAntiga = localStorage.getItem('openai_api_key');
+    
+    if (chaveAntiga && !localStorage.getItem('openai_api_key_segura')) {
+        console.log('Detectada chave API no formato antigo. Iniciando migração...');
+        
+        try {
+            // Solicitar ao usuário que crie uma senha para proteger a chave
+            const senha = prompt(
+                'Detectamos que você já possui uma chave da API da OpenAI armazenada no formato antigo. ' +
+                'Para aumentar a segurança, precisamos criptografá-la. ' +
+                'Por favor, crie uma senha para proteger sua chave:'
+            );
+            
+            if (senha) {
+                // Migrar para o formato seguro
+                const resultado = await salvarChaveAPISegura(chaveAntiga, senha);
+                
+                if (resultado) {
+                    alert('Sua chave da API foi migrada com sucesso para um formato mais seguro!');
+                } else {
+                    alert('Não foi possível migrar sua chave para o formato seguro. Por favor, configure-a novamente.');
+                }
+            } else {
+                // Se o usuário cancelar, manter ambas as formas por enquanto
+                console.log('Migração de chave cancelada pelo usuário.');
+            }
+        } catch (erro) {
+            console.error('Erro ao migrar chave:', erro);
+        }
+    }
+}
+
+function arquivarPorRep() {
+    const rep = prompt('Digite o número de REP do local que deseja arquivar:');
+    if (!rep) return;
+    
+    const local = locais.find(l => l.rep === rep);
+    if (!local) {
+        alert('Não foi encontrado nenhum local com este número de REP!');
+        return;
+    }
+    
+    // Obter data e hora atual formatada para arquivamento
+    const dataHoraArquivamento = new Date();
+    const dataArquivamentoFormatada = dataHoraArquivamento.toLocaleDateString('pt-BR');
+    const horaArquivamentoFormatada = dataHoraArquivamento.toLocaleTimeString('pt-BR');
+    const dataHoraArquivamentoFormatada = `${dataArquivamentoFormatada} às ${horaArquivamentoFormatada}`;
+    
+    // Atualizar o status para arquivado com data
+    local.status = 'arquivado';
+    
+    // Armazenar data de arquivamento como atributo do objeto
+    local.dataArquivamento = dataHoraArquivamento;
+    local.dataArquivamentoFormatada = dataHoraArquivamentoFormatada;
+    
+    // Se o local não tinha sido atendido anteriormente, adicionar data de atendimento também
+    if (!local.dataAtendimento) {
+        local.dataAtendimento = dataHoraArquivamento.toISOString();
+        local.dataAtendimentoFormatada = dataHoraArquivamentoFormatada;
+    }
+    
+    // Salvar no localStorage
+    salvarNoLocalStorage();
+    
+    // Atualizar a lista
+    atualizarListaLocais();
+    
+    // Confirmar ao usuário
+    alert(`O local REP ${local.rep} foi arquivado com sucesso!`);
+}
+
+function mudarStatusLocal(localId) {
+    // Encontrar o local pelo ID
+    const localIndex = locais.findIndex(l => l.id == localId);
+    if (localIndex === -1) {
+        console.error('Local não encontrado:', localId);
+        return;
+    }
+    
+    const local = locais[localIndex];
+    
+    if (local.status === 'arquivado') return; // Não permite mudar status de arquivado
+    
+    if (local.status === 'pendente') {
+        // Criar o modal de anotações
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay modal-visible';
+        
+        // Obter data e hora atual formatada para início do atendimento
+        const dataHoraInicio = new Date();
+        const dataInicioFormatada = dataHoraInicio.toLocaleDateString('pt-BR');
+        const horaInicioFormatada = dataHoraInicio.toLocaleTimeString('pt-BR');
+        const dataHoraInicioFormatada = `${dataInicioFormatada} às ${horaInicioFormatada}`;
+        
+        // Armazenar data de início do atendimento temporariamente no objeto do modal
+        modal.dataInicioAtendimento = dataHoraInicio;
+        modal.dataInicioAtendimentoFormatada = dataHoraInicioFormatada;
+        
+        modal.innerHTML = `
+            <div class="modal-content anotacoes-modal">
+                <div class="form-header">
+                    <h3><i class="fa-solid fa-clipboard-check"></i> Atendimento do Caso</h3>
+                    <button type="button" class="btn-fechar-modal">&times;</button>
+                </div>
+                
+                <div class="form-group">
+                    <p><strong>REP:</strong> ${local.rep}</p>
+                    <p><strong>Endereço:</strong> ${local.endereco}</p>
+                    <p><strong>Início do atendimento:</strong> ${dataHoraInicioFormatada}</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="anotacoes-caso">Anotações:</label>
+                    <textarea id="anotacoes-caso" rows="5" placeholder="Digite suas anotações sobre o atendimento...">${local.anotacoes || ''}</textarea>
+                </div>
+                
+                <div class="preservacao-container" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                        <label style="font-weight: bold; margin-right: 10px;">Preservado:</label>
+                        <div style="display: flex; gap: 15px;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="preservado" value="não" checked id="preservado-nao" style="margin-right: 5px;">
+                                Não
+                            </label>
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="radio" name="preservado" value="sim" id="preservado-sim" style="margin-right: 5px;">
+                                Sim
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="campos-preservacao" style="display: none;">
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 16px;">Equipe de Preservação</h4>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px;">Oficial</label>
+                                    <input type="text" id="preservacao-oficial" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px;">Registro</label>
+                                    <input type="text" id="preservacao-registro" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px;">Viatura</label>
+                                    <input type="text" id="preservacao-viatura" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 16px;">Autoridade no Local</h4>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px;">Delegado(a)</label>
+                                <input type="text" id="preservacao-delegado" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-buttons">
+                    <button class="btn-cancelar">
+                        <i class="fa-solid fa-times"></i>
+                        Cancelar
+                    </button>
+                    <button class="btn-confirmar">
+                        <i class="fa-solid fa-check"></i>
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Controle de exibição dos campos de preservação
+        const preservadoSimRadio = modal.querySelector('#preservado-sim');
+        const preservadoNaoRadio = modal.querySelector('#preservado-nao');
+        const camposPreservacao = modal.querySelector('#campos-preservacao');
+        
+        // Se o local já tiver informações de preservação, carregar os valores
+        if (local.preservacao) {
+            if (local.preservacao.preservado === 'sim') {
+                preservadoSimRadio.checked = true;
+                camposPreservacao.style.display = 'block';
+                
+                if (local.preservacao.oficial) modal.querySelector('#preservacao-oficial').value = local.preservacao.oficial;
+                if (local.preservacao.registro) modal.querySelector('#preservacao-registro').value = local.preservacao.registro;
+                if (local.preservacao.viatura) modal.querySelector('#preservacao-viatura').value = local.preservacao.viatura;
+                if (local.preservacao.delegado) modal.querySelector('#preservacao-delegado').value = local.preservacao.delegado;
+            }
+        }
+        
+        // Eventos para mostrar/esconder campos de preservação
+        preservadoSimRadio.addEventListener('change', () => {
+            camposPreservacao.style.display = 'block';
+        });
+        
+        preservadoNaoRadio.addEventListener('change', () => {
+            camposPreservacao.style.display = 'none';
+        });
+        
+        // Adicionar horário de início do atendimento ao abrir o modal
+        // Esta linha foi removida, pois agora salvamos a data no objeto do modal
+        
+        modal.querySelector('.btn-confirmar').addEventListener('click', () => {
+            const anotacoes = document.getElementById('anotacoes-caso').value;
+            
+            // Verificar se o local está preservado
+            const preservado = preservadoSimRadio.checked ? 'sim' : 'não';
+            
+            // Obter data e hora atual formatada para finalização
+            const dataHoraFim = new Date();
+            const dataFimFormatada = dataHoraFim.toLocaleDateString('pt-BR');
+            const horaFimFormatada = dataHoraFim.toLocaleTimeString('pt-BR');
+            const dataHoraFimFormatada = `${dataFimFormatada} às ${horaFimFormatada}`;
+            
+            // Agora salvamos as datas como atributos do objeto local
+            locais[localIndex].dataInicioAtendimento = modal.dataInicioAtendimento;
+            locais[localIndex].dataInicioAtendimentoFormatada = modal.dataInicioAtendimentoFormatada;
+            locais[localIndex].dataFimAtendimento = dataHoraFim;
+            locais[localIndex].dataFimAtendimentoFormatada = dataHoraFimFormatada;
+            
+            // Salvar as anotações sem adicionar as marcações de tempo
+            locais[localIndex].anotacoes = anotacoes;
+            locais[localIndex].status = 'atendido';
+            
+            // Adicionar data e hora do atendimento
+            locais[localIndex].dataAtendimento = dataHoraFim.toISOString();
+            locais[localIndex].dataAtendimentoFormatada = dataHoraFimFormatada;
+            
+            // Adicionar informações de preservação
+            locais[localIndex].preservacao = {
+                preservado: preservado
+            };
+            
+            // Se preservado, adicionar informações da equipe e delegado
+            if (preservado === 'sim') {
+                locais[localIndex].preservacao.oficial = document.getElementById('preservacao-oficial').value;
+                locais[localIndex].preservacao.registro = document.getElementById('preservacao-registro').value;
+                locais[localIndex].preservacao.viatura = document.getElementById('preservacao-viatura').value;
+                locais[localIndex].preservacao.delegado = document.getElementById('preservacao-delegado').value;
+            }
+            
+            salvarNoLocalStorage();
+            
+            // Decidir qual função de atualização chamar com base na visualização atual
+            if (document.querySelector('.cidade-header') || document.querySelector('.bairro-header')) {
+                atualizarListaLocaisAgrupados();
+            } else {
+                atualizarListaLocais();
+            }
+            
+            // Remover o modal do DOM
+            document.body.removeChild(modal);
+        });
+        
+        // Fechar modal ao clicar no botão cancelar
+        modal.querySelector('.btn-cancelar').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+        
+        // Fechar modal ao clicar no botão X
+        modal.querySelector('.btn-fechar-modal').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+
+        // Fechar modal ao clicar fora
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+        
+        // Fechar modal ao pressionar Esc
+        document.addEventListener('keydown', function escListener(e) {
+            if (e.key === 'Escape') {
+                fecharModal();
+                document.removeEventListener('keydown', escListener);
+            }
+        });
+    } else if (local.status === 'atendido' || local.status === 'arquivado') {
+        // Exibir modal com as anotações
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay modal-visible';
+        
+        let iconeStatus = '';
+        let tituloStatus = '';
+        
+        if (local.status === 'atendido') {
+            iconeStatus = 'fa-clipboard-check';
+            tituloStatus = 'Caso Atendido';
+        } else if (local.status === 'arquivado') {
+            iconeStatus = 'fa-box-archive';
+            tituloStatus = 'Caso Arquivado';
+        }
+        
+        // Verificar se há anotações
+        const temAnotacoes = local.anotacoes && local.anotacoes.trim() !== '';
+        
+        modal.innerHTML = `
+            <div class="modal-content anotacoes-modal">
+                <div class="form-header">
+                    <h3><i class="fa-solid ${iconeStatus}"></i> ${tituloStatus}</h3>
+                    <button type="button" class="btn-fechar-modal">&times;</button>
+                </div>
+                
+                <div class="form-group">
+                    <p><strong>REP:</strong> ${local.rep}</p>
+                    <p><strong>Endereço:</strong> ${local.endereco}</p>
+                    ${local.nomeVitima ? `<p><strong>Nome da Vítima:</strong> ${local.nomeVitima}</p>` : ''}
+                    ${local.telefoneVitima ? `<p><strong>Telefone da Vítima:</strong> ${local.telefoneVitima}</p>` : ''}
+                    ${local.tipoExame ? `<p><strong>Tipo de Exame:</strong> ${local.tipoExame}</p>` : ''}
+                    ${local.resumoCaso ? `<p><strong>Resumo do Caso:</strong> ${local.resumoCaso}</p>` : ''}
+                    
+                    ${local.dataInicioAtendimentoFormatada ? 
+                    `<p><strong>Início do atendimento:</strong> ${local.dataInicioAtendimentoFormatada}</p>` : ''}
+                    
+                    ${local.dataFimAtendimentoFormatada ?
+                    `<p><strong>Fim do atendimento:</strong> ${local.dataFimAtendimentoFormatada}</p>` : ''}
+                    
+                    ${local.dataArquivamentoFormatada && local.status === 'arquivado' ?
+                    `<p><strong>Arquivado em:</strong> ${local.dataArquivamentoFormatada}</p>` : ''}
+                </div>
+                
+                ${temAnotacoes ? `
+                <div class="form-group">
+                    <label><i class="fa-solid fa-clipboard-list"></i> Anotações do caso:</label>
+                    <div class="anotacoes-conteudo">${local.anotacoes}</div>
+                </div>
+                ` : `
+                <div class="anotacoes-vazia">
+                    <i class="fa-solid fa-clipboard"></i>
+                    <p>Este caso não possui anotações.</p>
+                </div>`}
+                
+                ${local.preservacao ? `
+                <div class="preservacao-info">
+                    <h4>
+                        <i class="fa-solid fa-shield-halved"></i>
+                        Preservação: <span class="${local.preservacao.preservado === 'sim' ? 'preservado-sim' : 'preservado-nao'}">${local.preservacao.preservado === 'sim' ? 'Sim' : 'Não'}</span>
+                    </h4>
+                    
+                    ${local.preservacao.preservado === 'sim' ? `
+                    <div class="equipe-preservacao">
+                        <h5>Equipe de Preservação:</h5>
+                        <div class="info-preservacao">
+                            <div class="info-item">
+                                <span class="info-label">Oficial:</span>
+                                <span class="info-valor">${local.preservacao.oficial || '-'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Registro:</span>
+                                <span class="info-valor">${local.preservacao.registro || '-'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Viatura:</span>
+                                <span class="info-valor">${local.preservacao.viatura || '-'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Delegado:</span>
+                                <span class="info-valor">${local.preservacao.delegado || '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                ` : ''}
+                
+                <div class="modal-buttons">
+                    ${temAnotacoes ? `
+                    <button class="btn-extrair-anotacoes" id="btn-extrair-${local.id}">
+                        <i class="fa-solid fa-copy"></i>
+                        Extrair Anotações
+                    </button>
+                    ` : ''}
+                    <button class="btn-fechar">
+                        <i class="fa-solid fa-times"></i>
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Adicionar o event listener para o botão de extrair anotações
+        if (temAnotacoes) {
+            const btnExtrair = modal.querySelector(`#btn-extrair-${local.id}`);
+            if (btnExtrair) {
+                btnExtrair.addEventListener('click', function() {
+                    extrairAnotacoes(local);
+                });
+            }
+        }
+        
+        // Eventos dos botões de fechar
+        const fecharModal = () => {
+            document.body.removeChild(modal);
+        };
+        
+        modal.querySelector('.btn-fechar-modal').addEventListener('click', fecharModal);
+        modal.querySelector('.btn-fechar').addEventListener('click', fecharModal);
+        
+        // Fechar modal ao clicar fora
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                fecharModal();
+            }
+        });
+        
+        // Fechar modal ao pressionar Esc
+        document.addEventListener('keydown', function escListener(e) {
+            if (e.key === 'Escape') {
+                fecharModal();
+                document.removeEventListener('keydown', escListener);
+            }
+        });
+    }
+}
+
+// Função para extrair anotações
+function extrairAnotacoes(local) {
+    // Criar o texto formatado com todas as informações
+    let texto = `REP: ${local.rep}\n`;
+    texto += `Endereço: ${local.endereco}\n`;
+    
+    if (local.nomeVitima) texto += `Nome da Vítima: ${local.nomeVitima}\n`;
+    if (local.telefoneVitima) texto += `Telefone da Vítima: ${local.telefoneVitima}\n`;
+    if (local.tipoExame) texto += `Tipo de Exame: ${local.tipoExame}\n`;
+    if (local.resumoCaso) texto += `Resumo do Caso: ${local.resumoCaso}\n`;
+    
+    if (local.dataInicioAtendimentoFormatada) texto += `\nInício do Atendimento: ${local.dataInicioAtendimentoFormatada}`;
+    if (local.dataFimAtendimentoFormatada) texto += `\nFim do Atendimento: ${local.dataFimAtendimentoFormatada}`;
+    
+    if (local.preservacao) {
+        texto += `\n\nPreservação: ${local.preservacao.preservado === 'sim' ? 'Sim' : 'Não'}`;
+        if (local.preservacao.preservado === 'sim') {
+            texto += '\n\nEquipe de Preservação:';
+            if (local.preservacao.oficial) texto += `\nOficial: ${local.preservacao.oficial}`;
+            if (local.preservacao.registro) texto += `\nRegistro: ${local.preservacao.registro}`;
+            if (local.preservacao.viatura) texto += `\nViatura: ${local.preservacao.viatura}`;
+            if (local.preservacao.delegado) texto += `\nDelegado: ${local.preservacao.delegado}`;
+        }
+    }
+    
+    if (local.anotacoes) {
+        texto += `\n\nAnotações:\n${local.anotacoes}`;
+    }
+    
+    console.log("Tentando copiar:", texto);
+    
+    // Criar um elemento input para usar com execCommand
+    const input = document.createElement('textarea');
+    input.value = texto;
+    input.style.position = 'fixed';
+    input.style.left = '0';
+    input.style.top = '0';
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
+    document.body.appendChild(input);
+    
+    // Selecionar o texto
+    input.focus();
+    input.select();
+    
+    let mensagem = '';
+    
+    // Tentar copiar com execCommand
+    try {
+        const copyResult = document.execCommand('copy');
+        mensagem = copyResult ? 
+            'Informações do caso copiadas para a área de transferência!' : 
+            'Não foi possível copiar automaticamente. Tente copiar manualmente.';
+    } catch (e) {
+        console.error("Erro no execCommand:", e);
+        mensagem = 'Erro ao copiar. Tente copiar manualmente.';
+    }
+    
+    // Remover o elemento
+    document.body.removeChild(input);
+    
+    // Exibir mensagem
+    alert(mensagem);
+    
+    // Se execCommand falhar, pelo menos mostre o texto em um prompt para facilitar a cópia manual
+    if (mensagem.includes('não foi possível') || mensagem.includes('erro')) {
+        prompt('Copie o texto abaixo manualmente (Ctrl+C):', texto);
+    }
+}
+
+.aviso-mobile {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #6c757d;
+}
+
+.aviso-mobile i {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #6c757d;
+}
+
+.aviso-mobile p {
+    margin: 0;
+}
+
+// Adicionar variável para armazenar a ordenação
+let ordenacaoAtual = null;
+
+// Função para atualizar a lista de locais agrupados por cidade e bairro
+function atualizarListaLocaisAgrupados() {
+    // Limpar a lista atual
+    listaLocais.innerHTML = '';
+    
+    // Obter o filtro de status atual
+    const filtro = filtroStatus.value;
+    
+    // Obter todos os locais (sem headers)
+    const todosLocais = locais.filter(local => !local.isCidadeHeader && !local.isBairroHeader);
+    
+    // Filtrar locais pelo status selecionado
+    const locaisFiltrados = filtro === 'todos' 
+        ? todosLocais 
+        : todosLocais.filter(local => local.status === filtro);
+    
+    // Se não houver locais para mostrar, exibir mensagem
+    if (locaisFiltrados.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td colspan="5" style="text-align: center;">Nenhum local encontrado</td>
+        `;
+        listaLocais.appendChild(tr);
+        return;
+    }
+    
+    // Se não tiver ordenação, mostrar lista normal
+    if (!ordenacaoAtual) {
+        renderizarLocaisSemOrdenacao(locaisFiltrados);
+        return;
+    }
+    
+    // Arrays para armazenar locais processados e não processados
+    const locaisProcessados = [];
+    const idsProcessados = new Set();
+    
+    // Processar locais com base na ordenação
+    ordenacaoAtual.cidades.forEach(cidade => {
+        let temLocaisNaCidade = false;
+        const locaisDaCidade = [];
+        
+        // Processar cada bairro da cidade
+        cidade.bairros.forEach(bairro => {
+            const locaisDoBairro = bairro.locais
+                .map(id => locaisFiltrados.find(l => l.id === id))
+                .filter(local => local !== undefined);
+                
+            if (locaisDoBairro.length > 0) {
+                temLocaisNaCidade = true;
+                
+                // Adicionar cabeçalho de bairro
+                locaisDaCidade.push({
+                    isBairroHeader: true,
+                    cidade: cidade.nome,
+                    bairro: bairro.nome
+                });
+                
+                // Adicionar locais do bairro
+                locaisDaCidade.push(...locaisDoBairro);
+                
+                // Marcar IDs como processados
+                locaisDoBairro.forEach(local => idsProcessados.add(local.id));
+            }
+        });
+        
+        // Se houver locais nesta cidade, adicionar cabeçalho de cidade e seus locais
+        if (temLocaisNaCidade) {
+            locaisProcessados.push({
+                isCidadeHeader: true,
+                cidade: cidade.nome
+            });
+            locaisProcessados.push(...locaisDaCidade);
+        }
+    });
+    
+    // Encontrar locais não processados (sem cidade/bairro identificado)
+    const locaisNaoProcessados = locaisFiltrados.filter(local => !idsProcessados.has(local.id));
+    
+    // Lista final a ser renderizada
+    let listaFinal = [];
+    
+    // Se houver locais não processados, colocá-los no topo
+    if (locaisNaoProcessados.length > 0) {
+        listaFinal.push({
+            isCidadeHeader: true,
+            cidade: "Locais sem cidade/bairro identificados"
+        });
+        listaFinal.push(...locaisNaoProcessados);
+    }
+    
+    // Adicionar os locais processados
+    listaFinal = listaFinal.concat(locaisProcessados);
+    
+    // Renderizar cada item da lista final
+    listaFinal.forEach(item => renderizarItem(item));
+}
+
+// Função auxiliar para renderizar locais sem ordenação
+function renderizarLocaisSemOrdenacao(locaisFiltrados) {
+    locaisFiltrados.forEach(local => renderizarItem(local));
+}
+
+// Função auxiliar para renderizar um item (cabeçalho ou local)
+function renderizarItem(item) {
+    // Se for cabeçalho de cidade
+    if (item.isCidadeHeader) {
+        const trCidade = document.createElement('tr');
+        trCidade.className = 'cidade-header';
+        trCidade.innerHTML = `
+            <td colspan="5" class="cidade-nome">
+                <i class="fa-solid fa-city"></i> ${item.cidade}
+            </td>
+        `;
+        listaLocais.appendChild(trCidade);
+        return;
+    }
+    
+    // Se for cabeçalho de bairro
+    if (item.isBairroHeader) {
+        const trBairro = document.createElement('tr');
+        trBairro.className = 'bairro-header';
+        trBairro.innerHTML = `
+            <td colspan="5" class="bairro-nome">
+                <i class="fa-solid fa-map-marker-alt"></i> ${item.bairro}
+            </td>
+        `;
+        listaLocais.appendChild(trBairro);
+        return;
+    }
+    
+    // Se for um local normal
+    const local = item;
+    const temDetalhes = local.nomeVitima || local.telefoneVitima || local.tipoExame || local.resumoCaso || (local.anexos && local.anexos.length > 0);
+    
+    // Linha principal
+    const tr = document.createElement('tr');
+    tr.dataset.id = local.id;
+    
+    tr.innerHTML = `
+        <td class="expandir-col">
+            <button type="button" class="btn-expandir ${!temDetalhes ? 'btn-desativado' : ''}" 
+                onclick="${temDetalhes ? `toggleDetalhes(${local.id})` : ''}"
+                ${!temDetalhes ? 'disabled' : ''}>
+                <i class="fa-solid ${temDetalhes ? 'fa-plus' : 'fa-circle-dot fa-xs'} expandir-icon"></i>
+            </button>
+        </td>
+        <td>${local.rep}</td>
+        <td>${local.endereco}</td>
+        <td class="status-${local.status} ${local.comPrazo ? 'com-prazo' : ''}">
+            <span class="status-indicator"></span>
+            <span class="status-text">
+                ${local.status === 'pendente' ? 'Pendente' : 
+                local.status === 'atendido' ? 'Atendido' : 
+                'Arquivado'}
+                ${local.anotacoes ? ' <i class="fa-solid fa-note-sticky"></i>' : ''}
+                ${local.preservacao && local.preservacao.preservado === 'sim' ? ' <i class="fa-solid fa-shield-alt" style="color: #27ae60;" title="Local preservado"></i>' : ''}
+            </span>
+        </td>
+        <td>
+            <div class="acoes-container">
+                ${local.status === 'pendente' ? 
+                    `<button class="btn-maps" onclick="abrirNoMaps('${local.endereco.replace(/'/g, "\\'")}')">
+                        <i class="fa-solid fa-map-location-dot"></i> Maps
+                    </button>
+                    <button class="btn-atender" onclick="mudarStatusLocal('${local.id}')">
+                        <i class="fa-solid fa-clipboard-check"></i> Atender
+                    </button>` : 
+                    `<button class="btn-ver-anotacoes" onclick="mudarStatusLocal('${local.id}')">
+                        <i class="fa-solid fa-note-sticky"></i> Ver Anotações
+                    </button>`
+                }
+            </div>
+        </td>
+    `;
+    
+    listaLocais.appendChild(tr);
+    
+    // Linha de detalhes (oculta inicialmente)
+    if (temDetalhes) {
+        const trDetalhes = document.createElement('tr');
+        trDetalhes.className = 'linha-detalhes';
+        trDetalhes.id = `detalhes-${local.id}`;
+        trDetalhes.style.display = 'none';
+        
+        let detalhesHTML = '<td colspan="5" class="detalhes-container">';
+        
+        if (local.nomeVitima) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-user"></i> Nome da vítima:</span> ${local.nomeVitima}</div>`;
+        if (local.telefoneVitima) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-phone"></i> Telefone da vítima:</span> ${local.telefoneVitima}</div>`;
+        if (local.tipoExame) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-stethoscope"></i> Tipo de exame:</span> ${local.tipoExame}</div>`;
+        if (local.resumoCaso) detalhesHTML += `<div class="detalhe-item"><span class="detalhe-label"><i class="fa-solid fa-file-lines"></i> Resumo do caso:</span> <div class="detalhe-resumo">${local.resumoCaso}</div></div>`;
+        
+        // Adicionar anexos se existirem
+        if (local.anexos && local.anexos.length > 0) {
+            detalhesHTML += `<div class="detalhe-item">
+                <span class="detalhe-label"><i class="fa-solid fa-paperclip"></i> Anexos:</span>
+                <div class="lista-anexos">`;
+            
+            local.anexos.forEach((anexo, index) => {
+                detalhesHTML += `
+                    <div class="anexo-item">
+                        <i class="fa-solid fa-file"></i>
+                        <a href="#" onclick="abrirAnexo('${anexo.conteudo}', '${anexo.tipo}', '${anexo.nome.replace(/'/g, "\\'")}'); return false;">
+                            ${anexo.nome}
+                        </a>
+                        <span class="tamanho-arquivo">(${formatarTamanhoArquivo(anexo.tamanho)})</span>
+                    </div>
+                `;
+            });
+            
+            detalhesHTML += `</div></div>`;
+        }
+        
+        detalhesHTML += '</td>';
+        
+        trDetalhes.innerHTML = detalhesHTML;
+        listaLocais.appendChild(trDetalhes);
+    }
+}
+
+// Atualizar a função ordenarPorBairroIA para salvar a ordenação
+async function ordenarPorBairroIA() {
+    // Obter os locais filtrados pelo status atual
+    const filtro = filtroStatus.value;
+    const locaisFiltrados = filtro === 'todos' 
+        ? locais 
+        : locais.filter(local => local.status === filtro);
+
+    if (locaisFiltrados.length === 0) {
+        alert('Não há locais para ordenar!');
+        return;
+    }
+
+    // Mostrar indicador de carregamento
+    const btnOrdenarIA = document.getElementById('btn-ordenar-ia');
+    const btnTextoOriginal = btnOrdenarIA.innerHTML;
+    btnOrdenarIA.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando...';
+    btnOrdenarIA.disabled = true;
+
+    try {
+        // Obter a chave da API de forma segura
+        const apiKey = await obterChaveAPI();
+        
+        if (!apiKey) {
+            // Se não há chave configurada, redirecionar para a configuração
+            alert('É necessário configurar uma chave API para usar este recurso.');
+            configurarAPI();
+            throw new Error('Chave de API não configurada');
+        }
+
+        // Preparar os dados dos endereços para enviar para a API
+        const enderecos = locaisFiltrados.map(local => ({
+            id: local.id,
+            rep: local.rep,
+            endereco: local.endereco
+        }));
+
+        // Construir mensagens para o ChatGPT
+        const messages = [
+            {
+                role: "system", 
+                content: "Você é um assistente especializado em extrair e categorizar informações geográficas de endereços."
+            },
+            {
+                role: "user",
+                content: `Analise os seguintes endereços e extraia a cidade e o bairro de cada um. Se não conseguir identificar exatamente, faça sua melhor estimativa baseada nas informações disponíveis. Agrupe primeiro por cidade e depois por bairro. Retorne APENAS no formato JSON como este exemplo: { "cidades": [ { "nome": "Nome da Cidade", "bairros": [ { "nome": "Nome do Bairro", "locais": [ids dos locais] } ] } ] }. Não inclua nenhum texto adicional. Aqui estão os endereços: ${JSON.stringify(enderecos)}`
+            }
+        ];
+        
+        // Enviar para a API do ChatGPT
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: "gpt-4",
+                messages: messages,
+                max_tokens: 1500
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Erro na API: ${response.status} - ${JSON.stringify(errorData)}`);
+        }
+        
+        const data = await response.json();
+        
+        // Extrair a resposta JSON
+        const assistantMessage = data.choices[0].message.content;
+        let resultados;
+        
+        try {
+            // Tentar extrair JSON diretamente
+            resultados = JSON.parse(assistantMessage);
+        } catch (e) {
+            // Se falhar, tentar encontrar um objeto JSON no texto
+            const jsonMatch = assistantMessage.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                resultados = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error('Não foi possível extrair dados JSON da resposta');
+            }
+        }
+
+        // Se houver resultados válidos, salvar a ordenação
+        if (resultados && resultados.cidades && Array.isArray(resultados.cidades)) {
+            ordenacaoAtual = resultados;
+            
+            // Atualizar a visualização
+            atualizarListaLocaisAgrupados();
+        } else {
+            throw new Error('Formato de resposta inválido ou sem grupos de cidades/bairros');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao ordenar por cidade/bairro:', error);
+        alert(`Erro ao ordenar por cidade/bairro: ${error.message}`);
+        // Restaurar visualização normal
+        atualizarListaLocais();
+    } finally {
+        // Restaurar o estado do botão
+        btnOrdenarIA.innerHTML = btnTextoOriginal;
+        btnOrdenarIA.disabled = false;
+    }
+}
