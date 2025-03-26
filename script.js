@@ -28,6 +28,162 @@ let arquivosParaAnexar = [];
 let modoEdicao = false;
 let localOriginal = null;
 let imagensParaIA = [];
+let apiKeyTemporaria = null;
+
+// Funções de criptografia para segurança da API key
+async function derivarChave(senha, salt) {
+    const encoder = new TextEncoder();
+    const senhaCodificada = encoder.encode(senha);
+    
+    // Importar senha como material de chave
+    const chaveBase = await crypto.subtle.importKey(
+        'raw',
+        senhaCodificada,
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+    );
+    
+    // Derivar chave de criptografia a partir da senha
+    return await crypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: salt,
+            iterations: 100000,
+            hash: 'SHA-256'
+        },
+        chaveBase,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    );
+}
+
+async function criptografarChaveAPI(chaveAPI, senhaUsuario) {
+    try {
+        const encoder = new TextEncoder();
+        const dadosCodificados = encoder.encode(chaveAPI);
+        
+        // Gerar salt aleatório
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        // Gerar vetor de inicialização aleatório
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        
+        // Derivar chave de criptografia da senha
+        const chave = await derivarChave(senhaUsuario, salt);
+        
+        // Criptografar a chave API
+        const dadosCriptografados = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv },
+            chave,
+            dadosCodificados
+        );
+        
+        // Converter para format que pode ser armazenado
+        return {
+            dados: Array.from(new Uint8Array(dadosCriptografados)),
+            iv: Array.from(iv),
+            salt: Array.from(salt)
+        };
+    } catch (erro) {
+        console.error('Erro ao criptografar:', erro);
+        throw erro;
+    }
+}
+
+async function descriptografarChaveAPI(dadosCriptografados, senhaUsuario) {
+    try {
+        // Converter de volta para ArrayBuffer
+        const dadosArray = new Uint8Array(dadosCriptografados.dados);
+        const iv = new Uint8Array(dadosCriptografados.iv);
+        const salt = new Uint8Array(dadosCriptografados.salt);
+        
+        // Derivar a mesma chave de criptografia
+        const chave = await derivarChave(senhaUsuario, salt);
+        
+        // Descriptografar
+        const dadosDescriptografados = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv },
+            chave,
+            dadosArray
+        );
+        
+        // Converter de volta para string
+        const decoder = new TextDecoder();
+        return decoder.decode(dadosDescriptografados);
+    } catch (erro) {
+        console.error('Erro ao descriptografar (senha incorreta ou dados corrompidos):', erro);
+        return null;
+    }
+}
+
+// Função para obter chave API segura
+async function obterChaveAPI() {
+    // Verificar se existe uma chave temporária na sessão
+    if (apiKeyTemporaria) {
+        return apiKeyTemporaria;
+    }
+    
+    // Verificar se existe uma chave criptografada no storage
+    const chaveCriptografada = localStorage.getItem('openai_api_key_segura');
+    
+    if (chaveCriptografada) {
+        // Se existe, solicitar senha para descriptografar
+        const senha = prompt('Digite sua senha para acessar a API da OpenAI:');
+        if (!senha) return null;
+        
+        try {
+            const chaveDescriptografada = await descriptografarChaveAPI(
+                JSON.parse(chaveCriptografada), 
+                senha
+            );
+            
+            if (chaveDescriptografada) {
+                // Armazenar temporariamente na sessão
+                apiKeyTemporaria = chaveDescriptografada;
+                return chaveDescriptografada;
+            } else {
+                alert('Senha incorreta ou dados corrompidos. Por favor, configure novamente sua chave de API.');
+                return null;
+            }
+        } catch (erro) {
+            localStorage.removeItem('openai_api_key_segura');
+            alert('Erro ao recuperar a chave de API. Por favor, configure novamente.');
+            return null;
+        }
+    } else {
+        // Se não existe, retornar nulo para solicitar nova configuração
+        return null;
+    }
+}
+
+// Função para salvar chave API de forma segura
+async function salvarChaveAPISegura(chaveAPI, senha) {
+    if (!chaveAPI || !senha) return false;
+    
+    try {
+        const chaveCriptografada = await criptografarChaveAPI(chaveAPI, senha);
+        localStorage.setItem('openai_api_key_segura', JSON.stringify(chaveCriptografada));
+        
+        // Armazenar temporariamente para uso na sessão atual
+        apiKeyTemporaria = chaveAPI;
+        
+        // Remover chave não segura se existir
+        if (localStorage.getItem('openai_api_key')) {
+            localStorage.removeItem('openai_api_key');
+        }
+        
+        return true;
+    } catch (erro) {
+        console.error('Erro ao salvar chave:', erro);
+        return false;
+    }
+}
+
+// Limpar chave temporária ao fechar ou recarregar a página
+window.addEventListener('beforeunload', () => {
+    apiKeyTemporaria = null;
+});
 
 // Funções
 function salvarNoLocalStorage() {
@@ -730,15 +886,14 @@ async function preencherFormularioComIA() {
     btnPreencherIA.disabled = true;
     
     try {
-        // Verificar a chave da API
-        const apiKey = localStorage.getItem('openai_api_key');
+        // Obter a chave da API de forma segura
+        const apiKey = await obterChaveAPI();
         
         if (!apiKey) {
-            const key = prompt('Por favor, insira sua chave de API da OpenAI:');
-            if (!key) {
-                throw new Error('Chave de API não fornecida');
-            }
-            localStorage.setItem('openai_api_key', key);
+            // Se não há chave configurada, redirecionar para a configuração
+            alert('É necessário configurar uma chave API para usar este recurso.');
+            configurarAPI();
+            throw new Error('Chave de API não configurada');
         }
 
         // Construir mensagens para o ChatGPT com imagens em base64
@@ -860,7 +1015,8 @@ async function preencherFormularioComIA() {
 
 // Funções para configurar a API
 function configurarAPI() {
-    const apiKey = localStorage.getItem('openai_api_key') || '';
+    // Verificar se já existe uma chave criptografada
+    const temChaveCriptografada = localStorage.getItem('openai_api_key_segura') !== null;
     
     // Criar e mostrar o modal
     const modal = document.createElement('div');
@@ -876,7 +1032,7 @@ function configurarAPI() {
             <div class="form-group">
                 <label for="apiKey">API Key da OpenAI:</label>
                 <div class="api-key-input-container">
-                    <input type="password" id="apiKey" class="form-control" value="${apiKey}" placeholder="Cole sua API Key aqui">
+                    <input type="password" id="apiKey" class="form-control" value="" placeholder="Cole sua API Key aqui">
                     <button type="button" class="btn-toggle-password" id="togglePassword">
                         <i class="fa-solid fa-eye"></i>
                     </button>
@@ -887,6 +1043,29 @@ function configurarAPI() {
                     <a href="https://platform.openai.com/api-keys" target="_blank" class="api-key-link">
                         Obtenha sua chave aqui
                     </a>
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="senhaAPI">Senha para proteger sua chave:</label>
+                <div class="api-key-input-container">
+                    <input type="password" id="senhaAPI" class="form-control" value="" placeholder="Crie uma senha para proteger sua chave">
+                    <button type="button" class="btn-toggle-password" id="toggleSenha">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+                <small class="form-text text-muted">
+                    <i class="fa-solid fa-shield-alt"></i>
+                    Esta senha será usada para criptografar sua chave API. Você precisará dela para usar a IA.
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmaSenhaAPI">Confirme a senha:</label>
+                <input type="password" id="confirmaSenhaAPI" class="form-control" value="" placeholder="Confirme sua senha">
+                <small class="form-text text-muted">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    Anote esta senha! Se esquecê-la, precisará configurar sua chave API novamente.
                 </small>
             </div>
             
@@ -916,6 +1095,17 @@ function configurarAPI() {
         this.querySelector('i').classList.toggle('fa-eye-slash');
     });
     
+    // Adicionar funcionalidade de mostrar/ocultar senha de proteção
+    const toggleSenha = modal.querySelector('#toggleSenha');
+    const senhaInput = modal.querySelector('#senhaAPI');
+    
+    toggleSenha.addEventListener('click', function() {
+        const type = senhaInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        senhaInput.setAttribute('type', type);
+        this.querySelector('i').classList.toggle('fa-eye');
+        this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+    
     // Evento para fechar o modal
     const fecharModal = () => {
         document.body.removeChild(modal);
@@ -941,18 +1131,40 @@ function configurarAPI() {
     });
     
     // Salvar a API key
-    modal.querySelector('#btnSalvarApiKey').addEventListener('click', function() {
+    modal.querySelector('#btnSalvarApiKey').addEventListener('click', async function() {
         const novaChave = apiKeyInput.value.trim();
+        const senha = senhaInput.value.trim();
+        const confirmaSenha = modal.querySelector('#confirmaSenhaAPI').value.trim();
         
         if (novaChave === '') {
-            localStorage.removeItem('openai_api_key');
-            alert('Chave da API removida');
-        } else {
-            localStorage.setItem('openai_api_key', novaChave);
-            alert('Chave da API salva com sucesso!');
+            alert('Por favor, insira uma chave de API válida.');
+            return;
         }
         
-        fecharModal();
+        if (senha === '') {
+            alert('Por favor, insira uma senha para proteger sua chave API.');
+            return;
+        }
+        
+        if (senha !== confirmaSenha) {
+            alert('As senhas não coincidem. Por favor, verifique.');
+            return;
+        }
+        
+        try {
+            // Salvar chave criptografada
+            const resultado = await salvarChaveAPISegura(novaChave, senha);
+            
+            if (resultado) {
+                alert('Chave da API salva com segurança!');
+                fecharModal();
+            } else {
+                alert('Erro ao salvar a chave. Verifique a senha e tente novamente.');
+            }
+        } catch (erro) {
+            console.error('Erro ao criptografar chave:', erro);
+            alert('Ocorreu um erro ao salvar a chave: ' + erro.message);
+        }
     });
 }
 
@@ -1094,15 +1306,14 @@ async function ordenarPorBairroIA() {
     btnOrdenarIA.disabled = true;
 
     try {
-        // Verificar a chave da API
-        const apiKey = localStorage.getItem('openai_api_key');
+        // Obter a chave da API de forma segura
+        const apiKey = await obterChaveAPI();
         
         if (!apiKey) {
-            const key = prompt('Por favor, insira sua chave de API da OpenAI:');
-            if (!key) {
-                throw new Error('Chave de API não fornecida');
-            }
-            localStorage.setItem('openai_api_key', key);
+            // Se não há chave configurada, redirecionar para a configuração
+            alert('É necessário configurar uma chave API para usar este recurso.');
+            configurarAPI();
+            throw new Error('Chave de API não configurada');
         }
 
         // Preparar os dados dos endereços para enviar para a API
@@ -1457,10 +1668,48 @@ window.addEventListener('DOMContentLoaded', () => {
     if (locaisArmazenados) {
         locais = JSON.parse(locaisArmazenados);
     }
+    
+    // Verificar se há uma chave no formato antigo para migrar
+    verificarEMigrarChaveAntiga();
+    
     // Garantir que o filtro comece com "pendente" selecionado
     filtroStatus.value = 'pendente';
     atualizarListaLocais();
 });
+
+// Função para verificar e migrar chave da API no formato antigo
+async function verificarEMigrarChaveAntiga() {
+    const chaveAntiga = localStorage.getItem('openai_api_key');
+    
+    if (chaveAntiga && !localStorage.getItem('openai_api_key_segura')) {
+        console.log('Detectada chave API no formato antigo. Iniciando migração...');
+        
+        try {
+            // Solicitar ao usuário que crie uma senha para proteger a chave
+            const senha = prompt(
+                'Detectamos que você já possui uma chave da API da OpenAI armazenada no formato antigo. ' +
+                'Para aumentar a segurança, precisamos criptografá-la. ' +
+                'Por favor, crie uma senha para proteger sua chave:'
+            );
+            
+            if (senha) {
+                // Migrar para o formato seguro
+                const resultado = await salvarChaveAPISegura(chaveAntiga, senha);
+                
+                if (resultado) {
+                    alert('Sua chave da API foi migrada com sucesso para um formato mais seguro!');
+                } else {
+                    alert('Não foi possível migrar sua chave para o formato seguro. Por favor, configure-a novamente.');
+                }
+            } else {
+                // Se o usuário cancelar, manter ambas as formas por enquanto
+                console.log('Migração de chave cancelada pelo usuário.');
+            }
+        } catch (erro) {
+            console.error('Erro ao migrar chave:', erro);
+        }
+    }
+}
 
 function arquivarPorRep() {
     const rep = prompt('Digite o número de REP do local que deseja arquivar:');
