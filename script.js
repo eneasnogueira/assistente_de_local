@@ -30,6 +30,12 @@ let localOriginal = null;
 let imagensParaIA = [];
 let apiKeyTemporaria = null;
 
+// Variáveis para gravação de áudio
+let mediaRecorder = null;
+let audioChunks = [];
+let gravacaoEmAndamento = false;
+let audioGravado = null;
+
 // Funções de criptografia para segurança da API key
 async function derivarChave(senha, salt) {
     const encoder = new TextEncoder();
@@ -1763,6 +1769,17 @@ function mudarStatusLocal(localId) {
     if (local.status === 'arquivado') return; // Não permite mudar status de arquivado
     
     if (local.status === 'pendente') {
+        // Resetar variáveis de gravação de áudio
+        audioGravado = null;
+        audioChunks = [];
+        gravacaoEmAndamento = false;
+        if (mediaRecorder) {
+            try {
+                mediaRecorder.stop();
+            } catch (e) {}
+            mediaRecorder = null;
+        }
+        
         // Criar o modal de anotações
         const modal = document.createElement('div');
         modal.className = 'modal-overlay modal-visible';
@@ -1793,6 +1810,22 @@ function mudarStatusLocal(localId) {
                 <div class="form-group">
                     <label for="anotacoes-caso">Anotações:</label>
                     <textarea id="anotacoes-caso" rows="5" placeholder="Digite suas anotações sobre o atendimento...">${local.anotacoes || ''}</textarea>
+                </div>
+                
+                <div class="form-group audio-recorder-container">
+                    <label><i class="fa-solid fa-microphone"></i> Gravação de Áudio:</label>
+                    <div class="audio-controls">
+                        <button type="button" id="btn-gravar-audio" class="btn-gravar-audio">
+                            <i class="fa-solid fa-microphone"></i> Gravar
+                        </button>
+                        <button type="button" id="btn-pausar-audio" class="btn-pausar-audio" disabled>
+                            <i class="fa-solid fa-pause"></i> Pausar
+                        </button>
+                        <button type="button" id="btn-parar-audio" class="btn-parar-audio" disabled>
+                            <i class="fa-solid fa-stop"></i> Parar
+                        </button>
+                    </div>
+                    <div id="audio-preview-container"></div>
                 </div>
                 
                 <div class="preservacao-container" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
@@ -1853,6 +1886,15 @@ function mudarStatusLocal(localId) {
         `;
         
         document.body.appendChild(modal);
+        
+        // Adicionar eventos para os botões de gravação de áudio
+        const btnGravar = document.getElementById('btn-gravar-audio');
+        const btnPausar = document.getElementById('btn-pausar-audio');
+        const btnParar = document.getElementById('btn-parar-audio');
+        
+        btnGravar.addEventListener('click', iniciarGravacaoAudio);
+        btnPausar.addEventListener('click', pausarRetomarGravacao);
+        btnParar.addEventListener('click', pararGravacao);
         
         // Controle de exibição dos campos de preservação
         const preservadoSimRadio = modal.querySelector('#preservado-sim');
@@ -1923,17 +1965,54 @@ function mudarStatusLocal(localId) {
                 locais[localIndex].preservacao.delegado = document.getElementById('preservacao-delegado').value;
             }
             
-            salvarNoLocalStorage();
+            // Função para finalizar o atendimento depois de salvar o áudio (se houver)
+            const finalizarAtendimento = () => {
+                // Limpar variáveis de gravação
+                audioGravado = null;
+                audioChunks = [];
+                gravacaoEmAndamento = false;
+                if (mediaRecorder) {
+                    try {
+                        mediaRecorder.stop();
+                    } catch (e) {}
+                    mediaRecorder = null;
+                }
+                
+                // Salvar no localStorage
+                salvarNoLocalStorage();
+                
+                // Decidir qual função de atualização chamar com base na visualização atual
+                if (document.querySelector('.cidade-header') || document.querySelector('.bairro-header')) {
+                    atualizarListaLocaisAgrupados();
+                } else {
+                    atualizarListaLocais();
+                }
+                
+                // Remover o modal do DOM
+                document.body.removeChild(modal);
+            };
             
-            // Decidir qual função de atualização chamar com base na visualização atual
-            if (document.querySelector('.cidade-header') || document.querySelector('.bairro-header')) {
-                atualizarListaLocaisAgrupados();
+            // Salvar o áudio gravado, se houver
+            if (audioGravado) {
+                // Converter o blob em base64 para armazenamento
+                const reader = new FileReader();
+                reader.readAsDataURL(audioGravado.blob);
+                reader.onloadend = function() {
+                    const audioBase64 = reader.result;
+                    
+                    // Adicionar áudio ao objeto local
+                    locais[localIndex].audio = {
+                        conteudo: audioBase64,
+                        tipo: 'audio/wav',
+                        dataGravacao: audioGravado.dataGravacao,
+                        dataGravacaoFormatada: new Date(audioGravado.dataGravacao).toLocaleString()
+                    };
+                    
+                    finalizarAtendimento();
+                };
             } else {
-                atualizarListaLocais();
+                finalizarAtendimento();
             }
-            
-            // Remover o modal do DOM
-            document.body.removeChild(modal);
         });
         
         // Fechar modal ao clicar no botão cancelar
@@ -1978,6 +2057,8 @@ function mudarStatusLocal(localId) {
         
         // Verificar se há anotações
         const temAnotacoes = local.anotacoes && local.anotacoes.trim() !== '';
+        // Verificar se há áudio
+        const temAudio = local.audio && local.audio.conteudo;
         
         modal.innerHTML = `
             <div class="modal-content anotacoes-modal">
@@ -2015,6 +2096,21 @@ function mudarStatusLocal(localId) {
                     <p>Este caso não possui anotações.</p>
                 </div>`}
                 
+                ${temAudio ? `
+                <div class="form-group audio-player-container">
+                    <label><i class="fa-solid fa-microphone"></i> Áudio do atendimento:</label>
+                    <div class="audio-player">
+                        <audio controls src="${local.audio.conteudo}"></audio>
+                        <div class="audio-info">
+                            <span>Gravado em ${local.audio.dataGravacaoFormatada || 'data desconhecida'}</span>
+                            <button type="button" class="btn-baixar-audio" id="btn-baixar-audio-${local.id}">
+                                <i class="fa-solid fa-download"></i> Baixar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
                 ${local.preservacao ? `
                 <div class="preservacao-info">
                     <h4>
@@ -2049,7 +2145,7 @@ function mudarStatusLocal(localId) {
                 ` : ''}
                 
                 <div class="modal-buttons">
-                    ${temAnotacoes ? `
+                    ${temAnotacoes || temAudio ? `
                     <button class="btn-extrair-anotacoes" id="btn-extrair-${local.id}">
                         <i class="fa-solid fa-copy"></i>
                         Extrair Anotações
@@ -2066,11 +2162,27 @@ function mudarStatusLocal(localId) {
         document.body.appendChild(modal);
         
         // Adicionar o event listener para o botão de extrair anotações
-        if (temAnotacoes) {
+        if (temAnotacoes || temAudio) {
             const btnExtrair = modal.querySelector(`#btn-extrair-${local.id}`);
             if (btnExtrair) {
                 btnExtrair.addEventListener('click', function() {
                     extrairAnotacoes(local);
+                });
+            }
+        }
+        
+        // Adicionar evento para o botão de baixar áudio
+        if (temAudio) {
+            const btnBaixarAudio = modal.querySelector(`#btn-baixar-audio-${local.id}`);
+            if (btnBaixarAudio) {
+                btnBaixarAudio.addEventListener('click', function() {
+                    // Criar um elemento de link para download
+                    const link = document.createElement('a');
+                    link.href = local.audio.conteudo;
+                    link.download = `Audio_REP_${local.rep}_${new Date().toISOString().replace(/[:.]/g, '-')}.wav`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                 });
             }
         }
@@ -2129,6 +2241,10 @@ function extrairAnotacoes(local) {
         texto += `\n\nAnotações:\n${local.anotacoes}`;
     }
     
+    if (local.audio && local.audio.dataGravacaoFormatada) {
+        texto += `\n\nÁudio gravado em: ${local.audio.dataGravacaoFormatada}`;
+    }
+    
     console.log("Tentando copiar:", texto);
     
     // Criar um elemento input para usar com execCommand
@@ -2168,4 +2284,121 @@ function extrairAnotacoes(local) {
     if (mensagem.includes('não foi possível') || mensagem.includes('erro')) {
         prompt('Copie o texto abaixo manualmente (Ctrl+C):', texto);
     }
+}
+
+// Função para pedir permissão e iniciar a gravação de áudio
+async function iniciarGravacaoAudio() {
+    try {
+        // Verificar se já existe um gravador
+        if (gravacaoEmAndamento) {
+            alert('Já existe uma gravação em andamento.');
+            return;
+        }
+
+        // Solicitar permissão para acessar o microfone
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Atualizar a interface para mostrar que está gravando
+        const btnGravar = document.getElementById('btn-gravar-audio');
+        const btnPausar = document.getElementById('btn-pausar-audio');
+        const btnParar = document.getElementById('btn-parar-audio');
+        
+        btnGravar.disabled = true;
+        btnPausar.disabled = false;
+        btnParar.disabled = false;
+        
+        // Criar o gravador
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        // Evento para receber os dados do áudio em chunks
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+                audioChunks.push(e.data);
+            }
+        };
+        
+        // Evento para quando a gravação terminar
+        mediaRecorder.onstop = async () => {
+            // Combinar todos os chunks em um único blob
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            
+            // Armazenar o áudio para salvar com as notas
+            audioGravado = {
+                blob: audioBlob,
+                url: audioUrl,
+                dataGravacao: new Date().toISOString()
+            };
+            
+            // Mostrar o player de áudio na interface
+            const playerContainer = document.getElementById('audio-preview-container');
+            if (playerContainer) {
+                playerContainer.innerHTML = `
+                    <div class="audio-preview">
+                        <audio controls src="${audioUrl}"></audio>
+                        <div class="audio-info">
+                            <span>Áudio gravado em ${new Date().toLocaleString()}</span>
+                            <button type="button" id="btn-remover-audio" class="btn-remover-audio">
+                                <i class="fa-solid fa-trash"></i> Remover
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Adicionar evento para o botão de remover
+                document.getElementById('btn-remover-audio').addEventListener('click', removerAudioGravado);
+            }
+            
+            // Parar todas as faixas do stream (liberar o microfone)
+            stream.getTracks().forEach(track => track.stop());
+            
+            // Resetar estado dos botões
+            btnGravar.disabled = false;
+            btnPausar.disabled = true;
+            btnParar.disabled = true;
+        };
+        
+        // Iniciar a gravação
+        mediaRecorder.start();
+        gravacaoEmAndamento = true;
+        
+    } catch (erro) {
+        console.error('Erro ao iniciar gravação:', erro);
+        alert(`Erro ao iniciar gravação: ${erro.message}`);
+    }
+}
+
+// Função para pausar/retomar a gravação
+function pausarRetomarGravacao() {
+    if (!mediaRecorder) return;
+    
+    const btnPausar = document.getElementById('btn-pausar-audio');
+    
+    if (mediaRecorder.state === 'recording') {
+        mediaRecorder.pause();
+        btnPausar.innerHTML = '<i class="fa-solid fa-play"></i> Retomar';
+    } else if (mediaRecorder.state === 'paused') {
+        mediaRecorder.resume();
+        btnPausar.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar';
+    }
+}
+
+// Função para parar a gravação
+function pararGravacao() {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+    
+    mediaRecorder.stop();
+    gravacaoEmAndamento = false;
+}
+
+// Função para remover o áudio gravado
+function removerAudioGravado() {
+    audioGravado = null;
+    const playerContainer = document.getElementById('audio-preview-container');
+    if (playerContainer) {
+        playerContainer.innerHTML = '';
+    }
+    
+    document.getElementById('btn-gravar-audio').disabled = false;
 }

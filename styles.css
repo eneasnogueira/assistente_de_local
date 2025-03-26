@@ -929,4 +929,126 @@ button i {
 
 .btn-toggle-password i {
     font-size: 16px;
+}
+
+/* Estilos para gravação de áudio */
+.audio-recorder-container {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f0f7fb;
+    border: 1px solid #d1e5f0;
+    border-radius: 8px;
+}
+
+.audio-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.btn-gravar-audio {
+    background-color: #e74c3c;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.btn-gravar-audio:hover {
+    background-color: #c0392b;
+}
+
+.btn-pausar-audio {
+    background-color: #f39c12;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-pausar-audio:hover {
+    background-color: #d35400;
+}
+
+.btn-parar-audio {
+    background-color: #3498db;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-parar-audio:hover {
+    background-color: #2980b9;
+}
+
+.audio-preview {
+    margin-top: 15px;
+    background-color: white;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.audio-preview audio {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.audio-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.btn-remover-audio {
+    background-color: #e74c3c;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+}
+
+.btn-remover-audio:hover {
+    background-color: #c0392b;
+}
+
+.audio-player-container {
+    margin-top: 20px;
+    background-color: #f0f7fb;
+    border: 1px solid #d1e5f0;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.audio-player {
+    background-color: white;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.btn-baixar-audio {
+    background-color: #3498db;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
 } 
