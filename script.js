@@ -1818,12 +1818,6 @@ function mudarStatusLocal(localId) {
                         <button type="button" id="btn-gravar-audio" class="btn-gravar-audio">
                             <i class="fa-solid fa-microphone"></i> Gravar
                         </button>
-                        <button type="button" id="btn-pausar-audio" class="btn-pausar-audio" disabled>
-                            <i class="fa-solid fa-pause"></i> Pausar
-                        </button>
-                        <button type="button" id="btn-parar-audio" class="btn-parar-audio" disabled>
-                            <i class="fa-solid fa-stop"></i> Parar
-                        </button>
                     </div>
                     <div id="audio-preview-container"></div>
                 </div>
@@ -1889,12 +1883,7 @@ function mudarStatusLocal(localId) {
         
         // Adicionar eventos para os botões de gravação de áudio
         const btnGravar = document.getElementById('btn-gravar-audio');
-        const btnPausar = document.getElementById('btn-pausar-audio');
-        const btnParar = document.getElementById('btn-parar-audio');
-        
-        btnGravar.addEventListener('click', iniciarGravacaoAudio);
-        btnPausar.addEventListener('click', pausarRetomarGravacao);
-        btnParar.addEventListener('click', pararGravacao);
+        btnGravar.addEventListener('click', alternarGravacao);
         
         // Controle de exibição dos campos de preservação
         const preservadoSimRadio = modal.querySelector('#preservado-sim');
@@ -1926,79 +1915,60 @@ function mudarStatusLocal(localId) {
         // Adicionar horário de início do atendimento ao abrir o modal
         // Esta linha foi removida, pois agora salvamos a data no objeto do modal
         
-        modal.querySelector('.btn-confirmar').addEventListener('click', () => {
-            const anotacoes = document.getElementById('anotacoes-caso').value;
-            
-            // Verificar se o local está preservado
-            const preservado = preservadoSimRadio.checked ? 'sim' : 'não';
-            
-            // Obter data e hora atual formatada para finalização
-            const dataHoraFim = new Date();
-            const dataFimFormatada = dataHoraFim.toLocaleDateString('pt-BR');
-            const horaFimFormatada = dataHoraFim.toLocaleTimeString('pt-BR');
-            const dataHoraFimFormatada = `${dataFimFormatada} às ${horaFimFormatada}`;
-            
-            // Agora salvamos as datas como atributos do objeto local
-            locais[localIndex].dataInicioAtendimento = modal.dataInicioAtendimento;
-            locais[localIndex].dataInicioAtendimentoFormatada = modal.dataInicioAtendimentoFormatada;
-            locais[localIndex].dataFimAtendimento = dataHoraFim;
-            locais[localIndex].dataFimAtendimentoFormatada = dataHoraFimFormatada;
-            
-            // Salvar as anotações sem adicionar as marcações de tempo
-            locais[localIndex].anotacoes = anotacoes;
-            locais[localIndex].status = 'atendido';
-            
-            // Adicionar data e hora do atendimento
-            locais[localIndex].dataAtendimento = dataHoraFim.toISOString();
-            locais[localIndex].dataAtendimentoFormatada = dataHoraFimFormatada;
-            
-            // Adicionar informações de preservação
-            locais[localIndex].preservacao = {
-                preservado: preservado
-            };
-            
-            // Se preservado, adicionar informações da equipe e delegado
-            if (preservado === 'sim') {
-                locais[localIndex].preservacao.oficial = document.getElementById('preservacao-oficial').value;
-                locais[localIndex].preservacao.registro = document.getElementById('preservacao-registro').value;
-                locais[localIndex].preservacao.viatura = document.getElementById('preservacao-viatura').value;
-                locais[localIndex].preservacao.delegado = document.getElementById('preservacao-delegado').value;
-            }
-            
-            // Função para finalizar o atendimento depois de salvar o áudio (se houver)
-            const finalizarAtendimento = () => {
-                // Limpar variáveis de gravação
-                audioGravado = null;
-                audioChunks = [];
-                gravacaoEmAndamento = false;
-                if (mediaRecorder) {
-                    try {
-                        mediaRecorder.stop();
-                    } catch (e) {}
-                    mediaRecorder = null;
+        modal.querySelector('.btn-confirmar').addEventListener('click', async () => {
+            try {
+                const anotacoes = document.getElementById('anotacoes-caso').value;
+                
+                // Verificar se o local está preservado
+                const preservado = preservadoSimRadio.checked ? 'sim' : 'não';
+                
+                // Obter data e hora atual formatada para finalização
+                const dataHoraFim = new Date();
+                const dataFimFormatada = dataHoraFim.toLocaleDateString('pt-BR');
+                const horaFimFormatada = dataHoraFim.toLocaleTimeString('pt-BR');
+                const dataHoraFimFormatada = `${dataFimFormatada} às ${horaFimFormatada}`;
+                
+                // Agora salvamos as datas como atributos do objeto local
+                locais[localIndex].dataInicioAtendimento = modal.dataInicioAtendimento;
+                locais[localIndex].dataInicioAtendimentoFormatada = modal.dataInicioAtendimentoFormatada;
+                locais[localIndex].dataFimAtendimento = dataHoraFim;
+                locais[localIndex].dataFimAtendimentoFormatada = dataHoraFimFormatada;
+                
+                // Salvar as anotações sem adicionar as marcações de tempo
+                locais[localIndex].anotacoes = anotacoes;
+                locais[localIndex].status = 'atendido';
+                
+                // Adicionar data e hora do atendimento
+                locais[localIndex].dataAtendimento = dataHoraFim.toISOString();
+                locais[localIndex].dataAtendimentoFormatada = dataHoraFimFormatada;
+                
+                // Adicionar informações de preservação
+                locais[localIndex].preservacao = {
+                    preservado: preservado
+                };
+                
+                // Se preservado, adicionar informações da equipe e delegado
+                if (preservado === 'sim') {
+                    locais[localIndex].preservacao.oficial = document.getElementById('preservacao-oficial').value;
+                    locais[localIndex].preservacao.registro = document.getElementById('preservacao-registro').value;
+                    locais[localIndex].preservacao.viatura = document.getElementById('preservacao-viatura').value;
+                    locais[localIndex].preservacao.delegado = document.getElementById('preservacao-delegado').value;
                 }
                 
-                // Salvar no localStorage
-                salvarNoLocalStorage();
-                
-                // Decidir qual função de atualização chamar com base na visualização atual
-                if (document.querySelector('.cidade-header') || document.querySelector('.bairro-header')) {
-                    atualizarListaLocaisAgrupados();
-                } else {
-                    atualizarListaLocais();
+                // Finalizar gravação se estiver em andamento e obter o áudio
+                if (gravacaoEmAndamento) {
+                    await finalizarGravacao();
                 }
                 
-                // Remover o modal do DOM
-                document.body.removeChild(modal);
-            };
-            
-            // Salvar o áudio gravado, se houver
-            if (audioGravado) {
-                // Converter o blob em base64 para armazenamento
-                const reader = new FileReader();
-                reader.readAsDataURL(audioGravado.blob);
-                reader.onloadend = function() {
-                    const audioBase64 = reader.result;
+                // Se temos áudio gravado, salvar no objeto local
+                if (audioGravado && audioGravado.blob) {
+                    // Converter o blob para base64
+                    const audioBase64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(audioGravado.blob);
+                    });
                     
                     // Adicionar áudio ao objeto local
                     locais[localIndex].audio = {
@@ -2007,11 +1977,34 @@ function mudarStatusLocal(localId) {
                         dataGravacao: audioGravado.dataGravacao,
                         dataGravacaoFormatada: new Date(audioGravado.dataGravacao).toLocaleString()
                     };
-                    
-                    finalizarAtendimento();
-                };
-            } else {
-                finalizarAtendimento();
+                }
+                
+                // Limpar variáveis de gravação
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    try {
+                        mediaRecorder.stop();
+                    } catch (e) {}
+                }
+                if (mediaRecorder && mediaRecorder.stream) {
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Salvar no localStorage
+                salvarNoLocalStorage();
+                
+                // Atualizar a interface
+                if (document.querySelector('.cidade-header') || document.querySelector('.bairro-header')) {
+                    atualizarListaLocaisAgrupados();
+                } else {
+                    atualizarListaLocais();
+                }
+                
+                // Remover o modal
+                document.body.removeChild(modal);
+                
+            } catch (error) {
+                console.error('Erro ao finalizar atendimento:', error);
+                alert('Ocorreu um erro ao salvar o atendimento. Tente novamente.');
             }
         });
         
@@ -2401,4 +2394,167 @@ function removerAudioGravado() {
     }
     
     document.getElementById('btn-gravar-audio').disabled = false;
+}
+
+// Função para alternar entre gravação e pausa
+function alternarGravacao() {
+    // Se o gravador não existe, iniciar gravação
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        iniciarGravacao();
+    } 
+    // Se o gravador existe e está gravando, pausar
+    else if (mediaRecorder.state === 'recording') {
+        pausarGravacao();
+    } 
+    // Se o gravador existe e está pausado, retomar gravação
+    else if (mediaRecorder.state === 'paused') {
+        retomarGravacao();
+    }
+}
+
+// Função para iniciar a gravação
+async function iniciarGravacao() {
+    try {
+        // Verificar se já existe um gravador ativo (não deveria acontecer, mas por segurança)
+        if (gravacaoEmAndamento && mediaRecorder && mediaRecorder.state === 'recording') {
+            alert('Já existe uma gravação em andamento.');
+            return;
+        }
+
+        // Solicitar permissão para acessar o microfone
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Atualizar a interface para mostrar que está gravando
+        const btnGravar = document.getElementById('btn-gravar-audio');
+        btnGravar.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar';
+        btnGravar.classList.remove('btn-gravar-audio');
+        btnGravar.classList.add('btn-pausar-audio');
+        
+        // Criar o gravador
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        // Evento para receber os dados do áudio em chunks
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+                audioChunks.push(e.data);
+            }
+        };
+        
+        // Evento para quando a gravação terminar
+        mediaRecorder.onstop = async () => {
+            // Não fazer nada ao parar, apenas quando finalizar no botão Confirmar
+            // Isso permite que o usuário alterne entre gravar e pausar várias vezes
+        };
+        
+        // Iniciar a gravação
+        mediaRecorder.start();
+        gravacaoEmAndamento = true;
+        
+    } catch (erro) {
+        console.error('Erro ao iniciar gravação:', erro);
+        alert(`Erro ao iniciar gravação: ${erro.message}`);
+    }
+}
+
+// Função para pausar a gravação
+function pausarGravacao() {
+    if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
+    
+    mediaRecorder.pause();
+    const btnGravar = document.getElementById('btn-gravar-audio');
+    btnGravar.innerHTML = '<i class="fa-solid fa-microphone"></i> Continuar';
+    btnGravar.classList.remove('btn-pausar-audio');
+    btnGravar.classList.add('btn-retomar-audio');
+}
+
+// Função para retomar a gravação
+function retomarGravacao() {
+    if (!mediaRecorder || mediaRecorder.state !== 'paused') return;
+    
+    mediaRecorder.resume();
+    const btnGravar = document.getElementById('btn-gravar-audio');
+    btnGravar.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar';
+    btnGravar.classList.remove('btn-retomar-audio');
+    btnGravar.classList.add('btn-pausar-audio');
+}
+
+// Função para finalizar a gravação e criar o player de áudio
+function finalizarGravacao() {
+    return new Promise((resolve) => {
+        if (!mediaRecorder || !gravacaoEmAndamento) {
+            resolve(null);
+            return;
+        }
+        
+        // Se estiver gravando ou pausada, parar a gravação
+        if (mediaRecorder.state !== 'inactive') {
+            // Função a ser chamada quando a gravação for parada
+            mediaRecorder.onstop = async () => {
+                // Combinar todos os chunks em um único blob
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                // Armazenar o áudio para salvar com as notas
+                audioGravado = {
+                    blob: audioBlob,
+                    url: audioUrl,
+                    dataGravacao: new Date().toISOString()
+                };
+                
+                // Mostrar o player de áudio na interface
+                const playerContainer = document.getElementById('audio-preview-container');
+                if (playerContainer) {
+                    playerContainer.innerHTML = `
+                        <div class="audio-preview">
+                            <audio controls src="${audioUrl}"></audio>
+                            <div class="audio-info">
+                                <span>Áudio gravado em ${new Date().toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Parar todas as faixas do stream (liberar o microfone)
+                if (mediaRecorder.stream) {
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Resetar estado do botão
+                const btnGravar = document.getElementById('btn-gravar-audio');
+                if (btnGravar) {
+                    btnGravar.disabled = true;
+                    btnGravar.innerHTML = '<i class="fa-solid fa-check"></i> Gravado';
+                    btnGravar.classList.remove('btn-pausar-audio', 'btn-retomar-audio');
+                    btnGravar.classList.add('btn-gravado');
+                }
+                
+                // Resolver a promessa com o áudio gravado
+                resolve(audioGravado);
+            };
+            
+            // Parar a gravação (isso vai acionar o evento onstop)
+            mediaRecorder.stop();
+            gravacaoEmAndamento = false;
+        } else {
+            resolve(audioGravado);
+        }
+    });
+}
+
+// Função para remover o áudio gravado
+function removerAudioGravado() {
+    audioGravado = null;
+    const playerContainer = document.getElementById('audio-preview-container');
+    if (playerContainer) {
+        playerContainer.innerHTML = '';
+    }
+    
+    const btnGravar = document.getElementById('btn-gravar-audio');
+    if (btnGravar) {
+        btnGravar.disabled = false;
+        btnGravar.innerHTML = '<i class="fa-solid fa-microphone"></i> Gravar';
+        btnGravar.classList.remove('btn-pausar-audio', 'btn-retomar-audio', 'btn-gravado');
+        btnGravar.classList.add('btn-gravar-audio');
+    }
 }

@@ -1051,4 +1051,40 @@ button i {
     align-items: center;
     gap: 5px;
     font-size: 14px;
+}
+
+.btn-retomar-audio {
+    background-color: #3498db;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-retomar-audio:hover {
+    background-color: #2980b9;
+}
+
+.btn-gravado {
+    background-color: #2ecc71;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: default;
+}
+
+.btn-gravado:hover {
+    background-color: #27ae60;
+}
+
+.btn-finalizar-audio {
+    background-color: #e74c3c;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 } 
