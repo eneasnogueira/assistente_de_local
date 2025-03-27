@@ -36,6 +36,88 @@ let audioChunks = [];
 let gravacaoEmAndamento = false;
 let audioGravado = null;
 
+// Garantir que os event listeners funcionem mesmo depois de alterações no DOM
+let tentativasFormulario = 0;
+const MAX_TENTATIVAS = 10;
+const INTERVALO_TENTATIVA = 1000; // 1 segundo
+
+function verificarEAdicionarEventListeners() {
+    tentativasFormulario++;
+    console.log(`Tentativa ${tentativasFormulario} de configurar event listeners`);
+    
+    const form = document.getElementById('local-form');
+    const btnSalvar = document.getElementById('btn-salvar-local');
+    
+    if (form) {
+        console.log("Formulário encontrado, configurando listeners");
+        
+        // Remover e adicionar novamente o listener para evitar duplicação
+        const novoForm = form.cloneNode(true);
+        if (form.parentNode) {
+            form.parentNode.replaceChild(novoForm, form);
+            
+            // Adicionar o listener no novo form
+            novoForm.addEventListener('submit', function(e) {
+                console.log("Formulário submetido (listener principal)");
+                e.preventDefault();
+                adicionarLocal(e);
+                return false;
+            });
+            
+            // Também encontrar o botão de submit no novo form
+            const novoBtnSalvar = novoForm.querySelector('button[type="submit"]');
+            if (novoBtnSalvar) {
+                novoBtnSalvar.addEventListener('click', function(e) {
+                    console.log("Botão submit clicado (dentro do form)");
+                    e.preventDefault();
+                    adicionarLocal(e);
+                    return false;
+                });
+            }
+        }
+    } else {
+        console.error("Formulário não encontrado!");
+    }
+    
+    // Adicionar listener direto no botão de salvar também
+    if (btnSalvar) {
+        console.log("Botão salvar encontrado, adicionando listener direto");
+        btnSalvar.addEventListener('click', function(e) {
+            console.log("Botão salvar clicado (listener direto)");
+            e.preventDefault();
+            adicionarLocal(e);
+            return false;
+        });
+    } else {
+        console.error("Botão salvar não encontrado!");
+    }
+    
+    // Se ainda não encontrou ou se precisamos tentar novamente
+    if ((!form || !btnSalvar) && tentativasFormulario < MAX_TENTATIVAS) {
+        console.log(`Agendando nova tentativa em ${INTERVALO_TENTATIVA}ms`);
+        setTimeout(verificarEAdicionarEventListeners, INTERVALO_TENTATIVA);
+    }
+}
+
+// Iniciar a verificação quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM carregado, iniciando verificação de formulário");
+    verificarEAdicionarEventListeners();
+    
+    // Adicionar listeners para botões principais
+    const btnMostrarForm = document.getElementById('btn-mostrar-form');
+    if (btnMostrarForm) {
+        console.log("Botão mostrar form encontrado");
+        btnMostrarForm.addEventListener('click', function() {
+            console.log("Botão mostrar form clicado");
+            abrirModal();
+            
+            // Tentar configurar os listeners novamente quando o modal for aberto
+            setTimeout(verificarEAdicionarEventListeners, 300);
+        });
+    }
+});
+
 // Funções de criptografia para segurança da API key
 async function derivarChave(senha, salt) {
     const encoder = new TextEncoder();
@@ -123,45 +205,190 @@ async function descriptografarChaveAPI(dadosCriptografados, senhaUsuario) {
     }
 }
 
+// Função para inicializar a chave da API ao carregar a página
+async function inicializarChaveAPI() {
+    const chaveCriptografada = localStorage.getItem('openai_api_key_segura');
+    if (chaveCriptografada) {
+        try {
+            const dadosCriptografados = JSON.parse(chaveCriptografada);
+            // Solicitar senha ao usuário para descriptografar
+            const senha = prompt('Por favor, insira sua senha para acessar a chave da API:');
+            if (senha) {
+                const chaveDescriptografada = await descriptografarChaveAPI(dadosCriptografados, senha);
+                if (chaveDescriptografada) {
+                    apiKeyTemporaria = chaveDescriptografada;
+                    return true;
+                }
+            }
+        } catch (erro) {
+            console.error('Erro ao inicializar chave API:', erro);
+        }
+    }
+    return false;
+}
+
 // Função para obter chave API segura
 async function obterChaveAPI() {
-    // Verificar se existe uma chave temporária na sessão
+    // Se já temos a chave temporária, retornar ela
     if (apiKeyTemporaria) {
         return apiKeyTemporaria;
     }
     
-    // Verificar se existe uma chave criptografada no storage
+    // Tentar obter a chave criptografada
     const chaveCriptografada = localStorage.getItem('openai_api_key_segura');
     
     if (chaveCriptografada) {
-        // Se existe, solicitar senha para descriptografar
-        const senha = prompt('Digite sua senha para acessar a API da OpenAI:');
-        if (!senha) return null;
-        
         try {
-            const chaveDescriptografada = await descriptografarChaveAPI(
-                JSON.parse(chaveCriptografada), 
-                senha
-            );
-            
-            if (chaveDescriptografada) {
-                // Armazenar temporariamente na sessão
-                apiKeyTemporaria = chaveDescriptografada;
-                return chaveDescriptografada;
-            } else {
-                alert('Senha incorreta ou dados corrompidos. Por favor, configure novamente sua chave de API.');
-                return null;
+            const dadosCriptografados = JSON.parse(chaveCriptografada);
+            // Solicitar senha ao usuário para descriptografar
+            const senha = prompt('Por favor, insira sua senha para acessar a chave da API:');
+            if (senha) {
+                const chaveDescriptografada = await descriptografarChaveAPI(dadosCriptografados, senha);
+                if (chaveDescriptografada) {
+                    apiKeyTemporaria = chaveDescriptografada;
+                    return chaveDescriptografada;
+                }
             }
         } catch (erro) {
-            localStorage.removeItem('openai_api_key_segura');
-            alert('Erro ao recuperar a chave de API. Por favor, configure novamente.');
-            return null;
+            console.error('Erro ao obter chave API:', erro);
         }
-    } else {
-        // Se não existe, retornar nulo para solicitar nova configuração
-        return null;
     }
+    
+    // Se não existir ou não conseguir descriptografar, solicitar ao usuário
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay modal-visible';
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="form-header">
+                <h3><i class="fa-solid fa-key"></i> Configuração da API</h3>
+                <button type="button" class="btn-fechar-modal">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="api-key">Chave da API OpenAI:</label>
+                <input type="password" id="api-key" placeholder="Digite sua chave da API">
+                <small class="form-text text-muted">
+                    Sua chave será armazenada localmente e usada apenas para transcrição de áudio.
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="senha-api">Senha para proteger sua chave:</label>
+                <input type="password" id="senha-api" placeholder="Crie uma senha para proteger sua chave">
+                <small class="form-text text-muted">
+                    Esta senha será usada para criptografar sua chave API. Você precisará dela para usar a IA.
+                </small>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn-cancelar">
+                    <i class="fa-solid fa-times"></i>
+                    Cancelar
+                </button>
+                <button class="btn-confirmar">
+                    <i class="fa-solid fa-check"></i>
+                    Salvar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Retornar uma Promise que será resolvida com a chave da API
+    return new Promise((resolve, reject) => {
+        const btnConfirmar = modal.querySelector('.btn-confirmar');
+        const btnCancelar = modal.querySelector('.btn-cancelar');
+        const btnFechar = modal.querySelector('.btn-fechar-modal');
+        
+        const fecharModal = () => {
+            document.body.removeChild(modal);
+        };
+        
+        btnConfirmar.addEventListener('click', async () => {
+            const apiKeyInput = document.getElementById('api-key');
+            const senhaInput = document.getElementById('senha-api');
+            const chave = apiKeyInput.value.trim();
+            const senha = senhaInput.value.trim();
+            
+            if (chave && senha) {
+                try {
+                    // Salvar a chave criptografada
+                    const resultado = await salvarChaveAPISegura(chave, senha);
+                    if (resultado) {
+                        apiKeyTemporaria = chave;
+                        fecharModal();
+                        resolve(chave);
+                    } else {
+                        alert('Erro ao salvar a chave. Tente novamente.');
+                    }
+                } catch (erro) {
+                    console.error('Erro ao salvar chave:', erro);
+                    alert('Erro ao salvar a chave: ' + erro.message);
+                }
+            } else {
+                alert('Por favor, preencha todos os campos.');
+            }
+        });
+        
+        btnCancelar.addEventListener('click', () => {
+            fecharModal();
+            reject(new Error('Operação cancelada pelo usuário'));
+        });
+        
+        btnFechar.addEventListener('click', fecharModal);
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                fecharModal();
+                reject(new Error('Operação cancelada pelo usuário'));
+            }
+        });
+    });
 }
+
+// Inicializar a chave da API quando a página carregar
+// document.addEventListener('DOMContentLoaded', inicializarChaveAPI);
+
+// Adicionar diagnóstico para resolver o problema do botão Adicionar
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM carregado: Inicializando diagnóstico de formulário");
+    
+    // Verificar elementos críticos
+    const form = document.getElementById('local-form');
+    const btnSalvarLocal = document.getElementById('btn-salvar-local');
+    
+    if (form) {
+        console.log("Formulário local-form encontrado");
+        
+        // Garantir que o evento de submit esteja funcionando
+        form.addEventListener('submit', function(e) {
+            console.log("Formulário submetido!", e);
+            e.preventDefault();
+            
+            const rep = document.getElementById('rep').value;
+            const endereco = document.getElementById('endereco').value;
+            
+            console.log("Tentando adicionar local:", rep, endereco);
+            
+            // Chamar a função original
+            adicionarLocal(e);
+        });
+    } else {
+        console.error("ERRO: Formulário local-form NÃO encontrado!");
+    }
+    
+    if (btnSalvarLocal) {
+        console.log("Botão salvar local encontrado");
+        btnSalvarLocal.addEventListener('click', function(e) {
+            console.log("Botão Salvar clicado!");
+            // O botão já faz parte do formulário, então não precisamos fazer nada especial aqui
+        });
+    } else {
+        console.error("ERRO: Botão salvar NÃO encontrado!");
+    }
+});
 
 // Função para salvar chave API de forma segura
 async function salvarChaveAPISegura(chaveAPI, senha) {
@@ -197,61 +424,99 @@ function salvarNoLocalStorage() {
 }
 
 function adicionarLocal(e) {
-    e.preventDefault();
+    // Impedir o comportamento padrão de envio do formulário
+    if (e) e.preventDefault();
     
-    const rep = document.getElementById('rep').value;
-    const endereco = document.getElementById('endereco').value;
+    console.log("Função adicionarLocal executando...");
+    
+    // Obter valores dos campos
+    const rep = document.getElementById('rep').value.trim();
+    const endereco = document.getElementById('endereco').value.trim();
     const comPrazo = document.getElementById('comPrazo').checked;
-    const nomeVitima = document.getElementById('nomeVitima').value;
-    const telefoneVitima = document.getElementById('telefoneVitima').value;
-    const tipoExame = document.getElementById('tipoExame').value;
-    const resumoCaso = document.getElementById('resumoCaso').value;
+    const nomeVitima = document.getElementById('nomeVitima').value.trim();
+    const telefoneVitima = document.getElementById('telefoneVitima').value.trim();
+    const tipoExame = document.getElementById('tipoExame').value.trim();
+    const resumoCaso = document.getElementById('resumoCaso').value.trim();
+    
+    console.log("Campos obtidos:", {rep, endereco, comPrazo});
+    
+    // Validação básica
+    if (!rep || !endereco) {
+        alert('Por favor, preencha o número de REP e o endereço.');
+        console.error("Validação falhou: REP ou endereço vazios");
+        return;
+    }
     
     // Verificar se o REP já existe, apenas se não estiver editando o mesmo REP
     if (!modoEdicao) {
         const existeRep = locais.some(local => local.rep === rep);
         if (existeRep) {
             alert('Já existe um local com este número de REP!');
+            console.error("REP duplicado:", rep);
             return;
         }
-    } else if (modoEdicao && localOriginal.rep !== rep) {
+    } else if (modoEdicao && localOriginal && localOriginal.rep !== rep) {
         // Se estiver editando, mas mudou o número REP, verificar se o novo REP já existe
         const existeRep = locais.some(local => local.rep === rep);
         if (existeRep) {
             alert('Já existe um local com este número de REP!');
+            console.error("REP duplicado (durante edição):", rep);
             return;
         }
     }
     
+    // Criar o objeto do novo local
     const novoLocal = {
-        id: modoEdicao ? localOriginal.id : Date.now(),
+        id: modoEdicao && localOriginal ? localOriginal.id : Date.now(),
         rep,
         endereco,
-        status: modoEdicao ? localOriginal.status : 'pendente',
+        status: modoEdicao && localOriginal ? localOriginal.status : 'pendente',
         comPrazo,
         nomeVitima,
         telefoneVitima,
         tipoExame,
         resumoCaso,
-        anexos: arquivosParaAnexar,
-        anotacoes: modoEdicao ? localOriginal.anotacoes : ''
+        anexos: arquivosParaAnexar || [],
+        anotacoes: modoEdicao && localOriginal ? localOriginal.anotacoes : ''
     };
     
-    locais.push(novoLocal);
-    salvarNoLocalStorage();
-    atualizarListaLocais();
+    console.log("Novo local criado:", novoLocal);
     
-    // Resetar modo de edição
-    modoEdicao = false;
-    localOriginal = null;
-    
-    // Esconder formulário após adicionar
-    fecharModal();
-    
-    // Limpar formulário e arquivos temporários
-    form.reset();
-    arquivosParaAnexar = [];
-    listaArquivosSelecionados.innerHTML = '';
+    // Adicionar o local à lista
+    try {
+        if (modoEdicao && localOriginal) {
+            // Se estiver em modo de edição, remover o local original
+            console.log("Removendo local original no modo edição:", localOriginal.id);
+            locais = locais.filter(local => local.id !== localOriginal.id);
+        }
+        
+        // Adicionar o novo local
+        locais.push(novoLocal);
+        console.log("Local adicionado com sucesso");
+        
+        // Salvar no localStorage
+        salvarNoLocalStorage();
+        
+        // Atualizar a lista de locais
+        atualizarListaLocais();
+        
+        // Resetar modo de edição
+        modoEdicao = false;
+        localOriginal = null;
+        
+        // Esconder formulário após adicionar
+        fecharModal();
+        
+        // Limpar formulário e arquivos temporários
+        if (form) form.reset();
+        arquivosParaAnexar = [];
+        if (listaArquivosSelecionados) listaArquivosSelecionados.innerHTML = '';
+        
+        console.log("Operação concluída com sucesso");
+    } catch (erro) {
+        console.error("Erro ao adicionar local:", erro);
+        alert("Ocorreu um erro ao salvar o local: " + erro.message);
+    }
 }
 
 function processarArquivosSelecionados() {
@@ -659,8 +924,11 @@ function toggleDetalhes(id) {
 }
 
 function abrirModal() {
+    console.log("abrirModal: Abrindo modal de formulário");
+    
     // Ao abrir para um novo local, limpar os arquivos
     if (document.getElementById('rep').value === '') {
+        console.log("abrirModal: Limpando dados para novo local");
         arquivosParaAnexar = [];
         listaArquivosSelecionados.innerHTML = '';
         
@@ -676,6 +944,35 @@ function abrirModal() {
     }
     
     modalOverlay.classList.add('modal-visible');
+    
+    // Garantir que o formulário tenha o evento de submit
+    const formElement = document.getElementById('local-form');
+    if (formElement) {
+        console.log("abrirModal: Adicionando event listener ao formulário");
+        
+        // Remover listeners antigos para evitar duplicação
+        const novoForm = formElement.cloneNode(true);
+        formElement.parentNode.replaceChild(novoForm, formElement);
+        
+        // Adicionar novo listener
+        novoForm.addEventListener('submit', function(e) {
+            console.log("Formulário submetido via modal");
+            e.preventDefault();
+            adicionarLocal(e);
+        });
+        
+        // Garantir que o botão de salvar também funcione
+        const btnSalvar = document.getElementById('btn-salvar-local');
+        if (btnSalvar) {
+            btnSalvar.addEventListener('click', function(e) {
+                console.log("Botão salvar clicado no modal");
+                e.preventDefault();
+                adicionarLocal(e);
+            });
+        }
+    } else {
+        console.error("abrirModal: Formulário não encontrado!");
+    }
 }
 
 function fecharModal() {
@@ -2096,9 +2393,14 @@ function mudarStatusLocal(localId) {
                         <audio controls src="${local.audio.conteudo}"></audio>
                         <div class="audio-info">
                             <span>Gravado em ${local.audio.dataGravacaoFormatada || 'data desconhecida'}</span>
-                            <button type="button" class="btn-baixar-audio" id="btn-baixar-audio-${local.id}">
-                                <i class="fa-solid fa-download"></i> Baixar
-                            </button>
+                            <div class="audio-actions">
+                                <button type="button" class="btn-baixar-audio" id="btn-baixar-audio-${local.id}">
+                                    <i class="fa-solid fa-download"></i> Baixar
+                                </button>
+                                <button type="button" class="btn-transcrever-audio" id="btn-transcrever-audio-${local.id}">
+                                    <i class="fa-solid fa-language"></i> Transcrever
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2178,6 +2480,84 @@ function mudarStatusLocal(localId) {
                     document.body.removeChild(link);
                 });
             }
+
+            // Adicionar evento para o botão de transcrever áudio
+            const btnTranscreverAudio = modal.querySelector(`#btn-transcrever-audio-${local.id}`);
+            if (btnTranscreverAudio) {
+                btnTranscreverAudio.addEventListener('click', async function() {
+                    try {
+                        // Desabilitar o botão e mostrar indicador de carregamento
+                        btnTranscreverAudio.disabled = true;
+                        btnTranscreverAudio.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Transcrevendo...';
+
+                        // Obter a chave da API de forma segura
+                        const apiKey = await obterChaveAPI();
+                        if (!apiKey) {
+                            throw new Error('Chave de API não configurada');
+                        }
+
+                        // Converter o áudio base64 para blob
+                        const audioBase64 = local.audio.conteudo.split(',')[1];
+                        const audioBlob = await fetch(`data:audio/wav;base64,${audioBase64}`).then(r => r.blob());
+
+                        // Criar FormData para enviar o arquivo
+                        const formData = new FormData();
+                        formData.append('file', audioBlob, 'audio.wav');
+                        formData.append('model', 'whisper-1');
+
+                        // Enviar para a API da OpenAI
+                        const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${apiKey}`
+                            },
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Erro na API: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        const transcricao = data.text;
+
+                        // Adicionar a transcrição às anotações existentes
+                        const anotacoesAtuais = local.anotacoes || '';
+                        const novaTranscricao = `\n\n=== Transcrição do Áudio ===\n${transcricao}`;
+                        local.anotacoes = anotacoesAtuais + novaTranscricao;
+
+                        // Atualizar o localStorage
+                        const index = locais.findIndex(l => l.id === local.id);
+                        if (index !== -1) {
+                            locais[index] = local;
+                            localStorage.setItem('locais', JSON.stringify(locais));
+                        }
+
+                        // Restaurar o botão
+                        btnTranscreverAudio.disabled = false;
+                        btnTranscreverAudio.innerHTML = '<i class="fa-solid fa-language"></i> Transcrever';
+
+                        alert('Transcrição concluída com sucesso!');
+                        
+                        // Fechar o modal atual e reabrir com as anotações atualizadas
+                        const modalAtual = document.querySelector('.modal-overlay');
+                        if (modalAtual) {
+                            document.body.removeChild(modalAtual);
+                            setTimeout(() => {
+                                mudarStatusLocal(local.id);
+                            }, 100);
+                        }
+
+                    } catch (erro) {
+                        console.error('Erro na transcrição:', erro);
+                        alert('Erro ao transcrever o áudio: ' + erro.message);
+                        
+                        // Restaurar o botão em caso de erro
+                        btnTranscreverAudio.disabled = false;
+                        btnTranscreverAudio.innerHTML = '<i class="fa-solid fa-language"></i> Transcrever';
+                    }
+                });
+            }
         }
         
         // Eventos dos botões de fechar
@@ -2207,76 +2587,141 @@ function mudarStatusLocal(localId) {
 
 // Função para extrair anotações
 function extrairAnotacoes(local) {
-    // Criar o texto formatado com todas as informações
-    let texto = `REP: ${local.rep}\n`;
-    texto += `Endereço: ${local.endereco}\n`;
+    const anotacoesContainer = document.createElement('div');
+    anotacoesContainer.className = 'anotacoes-container';
     
-    if (local.nomeVitima) texto += `Nome da Vítima: ${local.nomeVitima}\n`;
-    if (local.telefoneVitima) texto += `Telefone da Vítima: ${local.telefoneVitima}\n`;
-    if (local.tipoExame) texto += `Tipo de Exame: ${local.tipoExame}\n`;
-    if (local.resumoCaso) texto += `Resumo do Caso: ${local.resumoCaso}\n`;
+    // Adicionar cabeçalho das anotações
+    anotacoesContainer.innerHTML = `
+        <div class="anotacoes-header">
+            <h4><i class="fa-solid fa-sticky-note"></i> Anotações do Caso</h4>
+        </div>
+        <div class="anotacoes-content">
+            ${(local.anotacoes || '').replace(/\n/g, '<br>')}
+        </div>
+    `;
     
-    if (local.dataInicioAtendimentoFormatada) texto += `\nInício do Atendimento: ${local.dataInicioAtendimentoFormatada}`;
-    if (local.dataFimAtendimentoFormatada) texto += `\nFim do Atendimento: ${local.dataFimAtendimentoFormatada}`;
-    
-    if (local.preservacao) {
-        texto += `\n\nPreservação: ${local.preservacao.preservado === 'sim' ? 'Sim' : 'Não'}`;
-        if (local.preservacao.preservado === 'sim') {
-            texto += '\n\nEquipe de Preservação:';
-            if (local.preservacao.oficial) texto += `\nOficial: ${local.preservacao.oficial}`;
-            if (local.preservacao.registro) texto += `\nRegistro: ${local.preservacao.registro}`;
-            if (local.preservacao.viatura) texto += `\nViatura: ${local.preservacao.viatura}`;
-            if (local.preservacao.delegado) texto += `\nDelegado: ${local.preservacao.delegado}`;
+    // Adicionar o player de áudio se existir
+    if (local.audio) {
+        const audioContainer = document.createElement('div');
+        audioContainer.className = 'audio-player-container';
+        
+        audioContainer.innerHTML = `
+            <div class="audio-info">
+                <i class="fa-solid fa-microphone"></i>
+                <span>Áudio do Atendimento</span>
+            </div>
+            <audio controls>
+                <source src="${local.audio.conteudo}" type="audio/wav">
+                Seu navegador não suporta o elemento de áudio.
+            </audio>
+            <div class="audio-actions">
+                <button class="btn-baixar-audio">
+                    <i class="fa-solid fa-download"></i>
+                    Baixar
+                </button>
+                <button class="btn-transcrever-audio">
+                    <i class="fa-solid fa-language"></i>
+                    Transcrever
+                </button>
+            </div>
+        `;
+        
+        // Adicionar event listeners para os botões
+        const btnBaixar = audioContainer.querySelector('.btn-baixar-audio');
+        const btnTranscrever = audioContainer.querySelector('.btn-transcrever-audio');
+        
+        if (btnBaixar) {
+            btnBaixar.addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.href = local.audio.conteudo;
+                link.download = `audio_atendimento_${local.rep}.wav`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
         }
+        
+        if (btnTranscrever) {
+            btnTranscrever.addEventListener('click', async function() {
+                try {
+                    // Desabilitar o botão e mostrar indicador de carregamento
+                    btnTranscrever.disabled = true;
+                    btnTranscrever.classList.add('loading');
+                    btnTranscrever.innerHTML = '<i class="fa-solid fa-spinner"></i> Transcrevendo...';
+
+                    // Obter a chave da API de forma segura
+                    const apiKey = await obterChaveAPI();
+                    if (!apiKey) {
+                        throw new Error('Chave de API não configurada');
+                    }
+
+                    // Converter o áudio base64 para blob
+                    const audioBase64 = local.audio.conteudo.split(',')[1];
+                    const audioBlob = await fetch(`data:audio/wav;base64,${audioBase64}`).then(r => r.blob());
+
+                    // Criar FormData para enviar o arquivo
+                    const formData = new FormData();
+                    formData.append('file', audioBlob, 'audio.wav');
+                    formData.append('model', 'whisper-1');
+
+                    // Enviar para a API da OpenAI
+                    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erro na API: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const transcricao = data.text;
+
+                    // Adicionar a transcrição às anotações existentes
+                    const anotacoesAtuais = local.anotacoes || '';
+                    const novaTranscricao = `\n\n=== Transcrição do Áudio ===\n${transcricao}`;
+                    local.anotacoes = anotacoesAtuais + novaTranscricao;
+
+                    // Atualizar o localStorage
+                    const index = locais.findIndex(l => l.id === local.id);
+                    if (index !== -1) {
+                        locais[index] = local;
+                        localStorage.setItem('locais', JSON.stringify(locais));
+                    }
+
+                    // Atualizar a exibição das anotações
+                    const parent = audioContainer.parentElement;
+                    const anotacoesContent = parent.querySelector('.anotacoes-content');
+                    if (anotacoesContent) {
+                        anotacoesContent.innerHTML = local.anotacoes.replace(/\n/g, '<br>');
+                    }
+
+                    // Restaurar o botão
+                    btnTranscrever.disabled = false;
+                    btnTranscrever.classList.remove('loading');
+                    btnTranscrever.innerHTML = '<i class="fa-solid fa-language"></i> Transcrever';
+
+                    alert('Transcrição concluída com sucesso!');
+
+                } catch (erro) {
+                    console.error('Erro na transcrição:', erro);
+                    alert('Erro ao transcrever o áudio: ' + erro.message);
+                    
+                    // Restaurar o botão em caso de erro
+                    btnTranscrever.disabled = false;
+                    btnTranscrever.classList.remove('loading');
+                    btnTranscrever.innerHTML = '<i class="fa-solid fa-language"></i> Transcrever';
+                }
+            });
+        }
+        
+        anotacoesContainer.appendChild(audioContainer);
     }
     
-    if (local.anotacoes) {
-        texto += `\n\nAnotações:\n${local.anotacoes}`;
-    }
-    
-    if (local.audio && local.audio.dataGravacaoFormatada) {
-        texto += `\n\nÁudio gravado em: ${local.audio.dataGravacaoFormatada}`;
-    }
-    
-    console.log("Tentando copiar:", texto);
-    
-    // Criar um elemento input para usar com execCommand
-    const input = document.createElement('textarea');
-    input.value = texto;
-    input.style.position = 'fixed';
-    input.style.left = '0';
-    input.style.top = '0';
-    input.style.opacity = '0';
-    input.style.pointerEvents = 'none';
-    document.body.appendChild(input);
-    
-    // Selecionar o texto
-    input.focus();
-    input.select();
-    
-    let mensagem = '';
-    
-    // Tentar copiar com execCommand
-    try {
-        const copyResult = document.execCommand('copy');
-        mensagem = copyResult ? 
-            'Informações do caso copiadas para a área de transferência!' : 
-            'Não foi possível copiar automaticamente. Tente copiar manualmente.';
-    } catch (e) {
-        console.error("Erro no execCommand:", e);
-        mensagem = 'Erro ao copiar. Tente copiar manualmente.';
-    }
-    
-    // Remover o elemento
-    document.body.removeChild(input);
-    
-    // Exibir mensagem
-    alert(mensagem);
-    
-    // Se execCommand falhar, pelo menos mostre o texto em um prompt para facilitar a cópia manual
-    if (mensagem.includes('não foi possível') || mensagem.includes('erro')) {
-        prompt('Copie o texto abaixo manualmente (Ctrl+C):', texto);
-    }
+    return anotacoesContainer;
 }
 
 // Função para pedir permissão e iniciar a gravação de áudio
